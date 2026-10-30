@@ -90,7 +90,7 @@ def test_reduces_to_3dof_and_1dof_on_vertical_rail_without_wind():
     six = simulate(rocket, launch)
     three = simulate_3dof(rocket, launch)
     one = simulate_1dof(Rocket1D(rocket.dry_mass, rocket.body.diameter, 0.5, rocket.motor,
-                                 rocket.chute_cda, launch.site_altitude))
+                                 rocket.recovery.drogue.cda, launch.site_altitude))
     for ref in (three, one):
         assert six.summary["apogee"] == pytest.approx(ref.summary["apogee"], rel=1e-3)
     assert np.abs(six.trajectory["x"]).max() < 1e-6

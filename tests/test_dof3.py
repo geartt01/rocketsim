@@ -31,7 +31,8 @@ def setup(wind_speed=0.0, elevation_deg=90.0, profile="constant", cd=None):
 def test_reduces_to_1dof_on_vertical_rail_without_wind():
     rocket, launch = setup(cd=0.5)
     flight = simulate_3dof(rocket, launch)
-    r1 = Rocket1D(rocket.dry_mass, rocket.body.diameter, 0.5, rocket.motor, rocket.chute_cda,
+    r1 = Rocket1D(rocket.dry_mass, rocket.body.diameter, 0.5, rocket.motor,
+                  rocket.recovery.drogue.cda,
                   launch.site_altitude)
     ref = simulate_1dof(r1)
     assert flight.summary["apogee"] == pytest.approx(ref.summary["apogee"], rel=1e-3)
@@ -70,7 +71,7 @@ def test_weathercocks_into_wind():
 def test_drifts_with_the_wind_under_parachute():
     flight = simulate_3dof(*setup(wind_speed=4.0))
     tr = flight.trajectory
-    chute = tr["phase"] == "parachute"
+    chute = tr["phase"] == "drogue"
     assert tr["vx"][chute][-1] == pytest.approx(4.0, rel=1e-3)
     assert flight.summary["landing_position"][0] > flight.summary["apogee_position"][0]
 

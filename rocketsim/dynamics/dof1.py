@@ -56,7 +56,7 @@ def derivatives(t, y, rocket, chute):
     already contains the momentum carried away by the exhaust (Tsiolkovsky's derivation).
 
     Source: standard drag equation D = ½·ρ·v²·Cd·A (Anderson, Fundamentals of Aerodynamics,
-    ch. 1); rocket equation of motion as in Niskanen 2009, ch. 4 (unverified section number).
+    ch. 1); rocket equation of motion as in Niskanen 2009, §4.2.
     """
     z, v = y
     cda = rocket.chute_cda if chute else rocket.cd * rocket.area

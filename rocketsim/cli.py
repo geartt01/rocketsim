@@ -34,6 +34,10 @@ def main(argv=None):
     print(f"Stability margin    {s['margin_rail_exit']:8.2f} cal at rail exit "
           f"(min {s['min_margin']:.2f})")
     print(f"Max angle of attack {np.degrees(s['max_alpha']):8.1f} deg")
+    for chute in ("drogue", "main"):
+        if s[f"{chute}_descent_rate"] is not None:
+            print(f"Descent under {chute:6} {s[f'{chute}_descent_rate']:6.2f} m/s")
+    print(f"Opening shock       {s['opening_shock_g']:8.1f} g (peak chute drag / weight)")
     print(f"Landing velocity    {s['landing_velocity']:8.2f} m/s")
     print(f"Landing point       {s['drift']:8.1f} m from the rail (E {lx:+.1f} m, N {ly:+.1f} m)")
     print(f"Flight time         {s['flight_time']:8.1f} s")

@@ -20,7 +20,9 @@ rocket:
   surface_roughness: 60.0e-6
   drag: 0.5
 motor: {MOTOR}
-recovery: {{chute_cda: 0.05}}
+recovery:
+  drogue: {{cda: 0.01, fill_time: 0.2, delay: 1.0}}
+  main: {{cda: 0.06, fill_time: 0.3, altitude: 100}}
 launch: {{site_altitude: 300, rail_length: 1.0, rail_elevation: 85, rail_heading: 45}}
 wind: {{speed: 2.0, direction: 300, reference_height: 10.0, profile: constant}}
 """
@@ -56,7 +58,9 @@ def test_drag_table(tmp_path):
     ("old", "new", "message"),
     [
         ("root_chord: 0.06", "rootchord: 0.06", "unknown"),
-        ("chute_cda: 0.05", "chute_cda: -0.05", "must be >"),
+        ("cda: 0.06", "cda: -0.06", "must be >"),
+        ("delay: 1.0", "delay: -1.0", "≥ 0"),
+        ("altitude: 100", "height: 100", "unknown"),
         ("mass: 0.012", "mass: heavy", "must be a number"),
         ("count: 3", "count: 2", "≥ 3"),
         ("shape: ogive, length: 0.08", "shape: ogive, length: 0.01", "tangent ogive"),

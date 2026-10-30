@@ -11,6 +11,7 @@ from rocketsim.aero.barrowman import fins_cn_alpha_cp, nose_cn_alpha_cp
 from rocketsim.aero.damping import pitch_damping_coefficient, roll_damping_coefficient
 from rocketsim.aero.drag import drag_coefficient
 from rocketsim.dynamics.dof3 import air
+from rocketsim.recovery import open_cda
 
 STATE = ("x", "y", "z", "vx", "vy", "vz", "qw", "qx", "qy", "qz", "wx", "wy", "wz")
 Z, VZ, HORIZONTAL, VELOCITY = 2, 5, (0, 1), (3, 4, 5)
@@ -115,12 +116,16 @@ def derivatives_rail(t, y, rocket, launch):
     return np.concatenate([y[3:6], along * e, _STILL])
 
 
-def derivatives_chute(t, y, rocket, launch):
-    """Under parachute, point mass: a = −½ρ·CdA·|v_a|·v_a / m − g·ẑ; attitude frozen."""
+def derivatives_chute(t, y, rocket, launch, deployments):
+    """Under parachute, point mass: a = −½ρ·CdA(t)·|v_a|·v_a / m − g·ẑ; attitude frozen.
+
+    CdA(t) from recovery.open_cda; body drag ignored under canopy. Drag acts along −v_a, so
+    the rocket drifts with the wind (PLAN.md §3: point-mass recovery).
+    """
     m = rocket.mass_properties(t)[0]
     rho = air(launch, y[2])[0]
     va = y[3:6] - launch.wind.vector(y[2])
-    accel = -0.5 * rho * rocket.chute_cda * np.linalg.norm(va) / m * va
+    accel = -0.5 * rho * open_cda(t, deployments) * np.linalg.norm(va) / m * va
     accel[2] -= launch.g
     return np.concatenate([y[3:6], accel, _STILL])
 

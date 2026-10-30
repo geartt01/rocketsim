@@ -30,8 +30,15 @@ rocket:
 
 motor: ../motors/Estes_C6.eng   # RASP file, path relative to this config file
 
-recovery:
-  chute_cda: 0.0565       # m^2, Cd*A of a 30 cm parachute (Cd 0.8 * pi * 0.15^2)
+recovery:                 # chutes stay attached once out; Cd*A grows linearly over fill_time
+  drogue:                 # a single-chute model rocket uses only this one
+    cda: 0.0565           # m^2, Cd*A of a 30 cm parachute (Cd 0.8 * pi * 0.15^2)
+    fill_time: 0.3        # s from deployment to fully open
+    delay: 0.0            # s after apogee (e.g. a late motor ejection charge)
+  # main:                 # optional second chute
+  #   cda: 0.30           # m^2
+  #   fill_time: 0.5      # s
+  #   altitude: 150.0     # m above the launch site, deploys while descending through it
 
 launch:
   site_altitude: 0.0      # m above mean sea level

@@ -9,6 +9,7 @@ import yaml
 from rocketsim.dynamics.dof3 import Launch
 from rocketsim.geometry import FIN_PROFILES, NOSE_SHAPES, Body, Fins, MassItem, Nose, Rocket
 from rocketsim.motor import load_eng
+from rocketsim.recovery import Chute, Recovery
 from rocketsim.wind import Wind
 
 
@@ -98,11 +99,19 @@ def load_config(path):
 
     if not isinstance(cfg["motor"], str):
         fail("motor must be a path to a .eng file")
-    s = section(cfg, "recovery", "recovery", ("chute_cda",))
+    section(cfg, "recovery", "recovery", ("drogue",), ("main",))
+    s = section(cfg["recovery"], "drogue", "recovery.drogue", ("cda", "fill_time", "delay"))
+    drogue = Chute(number(s, "cda", "recovery.drogue", 0),
+                   number(s, "fill_time", "recovery.drogue", 0, low_ok=True))
+    recovery = Recovery(drogue, number(s, "delay", "recovery.drogue", 0, low_ok=True))
+    if "main" in cfg["recovery"]:
+        s = section(cfg["recovery"], "main", "recovery.main", ("cda", "fill_time", "altitude"))
+        recovery.main = Chute(number(s, "cda", "recovery.main", 0),
+                              number(s, "fill_time", "recovery.main", 0, low_ok=True))
+        recovery.main_altitude = number(s, "altitude", "recovery.main", 0)
     rocket = Rocket(nose, body, fins, masses, load_eng(path.parent / cfg["motor"]),
                     number(r, "motor_position", "rocket", 0),
-                    number(r, "surface_roughness", "rocket", 0), drag,
-                    number(s, "chute_cda", "recovery", 0))
+                    number(r, "surface_roughness", "rocket", 0), drag, recovery)
 
     s = section(cfg, "wind", "wind", ("speed", "direction", "reference_height", "profile"))
     wind = Wind(number(s, "speed", "wind", 0, low_ok=True),

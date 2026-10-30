@@ -28,7 +28,8 @@ def make_rocket(motor=None, **overrides):
 def example_rocket_1dof():
     """The example config's mass, diameter and real C6 motor with a constant Cd of 0.5."""
     rocket, launch = load_config(ROOT / "configs" / "example_rocket.yaml")
-    return Rocket1D(rocket.dry_mass, rocket.body.diameter, 0.5, rocket.motor, rocket.chute_cda,
+    return Rocket1D(rocket.dry_mass, rocket.body.diameter, 0.5, rocket.motor,
+                    rocket.recovery.drogue.cda,
                     launch.site_altitude)
 
 

@@ -10,6 +10,7 @@ import numpy as np
 from scipy.integrate import quad
 
 from rocketsim.motor import Motor
+from rocketsim.recovery import Recovery
 
 NOSE_SHAPES = ("cone", "ogive", "elliptical", "von_karman")
 FIN_PROFILES = ("square", "rounded", "airfoil")
@@ -141,7 +142,7 @@ class Rocket:
     motor_position: float  # m, nose tip to the motor's aft end
     roughness: float  # m, surface roughness height (Niskanen Table 3.2)
     drag: object  # "buildup" | float (constant Cd) | (mach array, cd array) table
-    chute_cda: float  # m², parachute Cd·A
+    recovery: Recovery
     _dry: tuple = field(init=False, repr=False)  # (mass, x_cg, I about x_cg) without motor
 
     def __post_init__(self):
