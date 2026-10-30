@@ -1,13 +1,16 @@
-"""Command line: python -m rocketsim run <config.yaml>."""
+"""Command line: python -m rocketsim run|montecarlo <config.yaml>."""
 
 import argparse
+import csv
+import time
 from pathlib import Path
 
 import numpy as np
 
+from rocketsim import montecarlo
 from rocketsim.flight import simulate
 from rocketsim.io import load_config, write_trajectory_csv
-from rocketsim.plots import plot_3d, plot_flight
+from rocketsim.plots import plot_3d, plot_flight, plot_montecarlo
 
 
 def main(argv=None):
@@ -15,10 +18,22 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run", help="simulate one flight and save results to outputs/")
     run.add_argument("config", help="rocket config YAML")
+    mc = commands.add_parser("montecarlo", help="dispersed flights using the config's "
+                             "dispersions: section; saves statistics to outputs/")
+    mc.add_argument("config", help="rocket config YAML")
+    mc.add_argument("-n", type=int, default=500, help="number of flights (default 500)")
+    mc.add_argument("--seed", type=int, default=1, help="master random seed (default 1)")
+    mc.add_argument("--workers", type=int, default=None, help="processes (default: all cores)")
     args = parser.parse_args(argv)
-
-    flight = simulate(*load_config(args.config))
     out = Path("outputs") / Path(args.config).stem
+    if args.command == "run":
+        _run(args, out)
+    else:
+        _montecarlo(args, out)
+
+
+def _run(args, out):
+    flight = simulate(*load_config(args.config))
     out.mkdir(parents=True, exist_ok=True)
     write_trajectory_csv(flight, out / "trajectory.csv")
     plot_flight(flight, out / "flight.png")
@@ -42,3 +57,35 @@ def main(argv=None):
     print(f"Landing point       {s['drift']:8.1f} m from the rail (E {lx:+.1f} m, N {ly:+.1f} m)")
     print(f"Flight time         {s['flight_time']:8.1f} s")
     print(f"Saved {out / 'trajectory.csv'}, {out / 'flight.png'} and {out / 'trajectory_3d.png'}")
+
+
+def _montecarlo(args, out):
+    specs = montecarlo.load_dispersions(args.config)
+    start = time.perf_counter()
+    rows = montecarlo.run(Path(args.config), specs, args.n, args.seed, args.workers)
+    elapsed = time.perf_counter() - start
+    stats = montecarlo.statistics(rows)
+    out.mkdir(parents=True, exist_ok=True)
+    columns = ["run", "status", *montecarlo.PARAMETERS, *montecarlo.SUMMARY_COLUMNS]
+    with open(out / "montecarlo.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, columns)
+        writer.writeheader()
+        writer.writerows({"run": i, **r} for i, r in enumerate(rows))
+
+    print(f"{stats['runs']} runs in {elapsed:.0f} s (seed {args.seed}), {stats['failed']} failed")
+    for msg in sorted({r["status"] for r in rows if r["status"] != "ok"}):
+        print(f"  {msg}")
+    if "apogee" in stats:
+        plot_montecarlo(rows, stats, out / "montecarlo.png")
+        for key, label, unit in (("apogee", "Apogee", "m"),
+                                 ("rail_exit_velocity", "Rail-exit velocity", "m/s"),
+                                 ("margin_rail_exit", "Margin at rail exit", "cal"),
+                                 ("drift", "Landing distance", "m")):
+            s = stats[key]
+            print(f"{label:20} mean {s['mean']:7.2f} {unit:3}  σ {s['std']:6.2f}  "
+                  f"5–95 % {s['p5']:7.2f}–{s['p95']:.2f}  (min {s['min']:.2f})")
+        for k, (center, axes, angle) in stats.get("landing_ellipses", {}).items():
+            print(f"Landing {k}σ ellipse  centre E {center[0]:+.0f} N {center[1]:+.0f} m, "
+                  f"semi-axes {axes[0]:.0f} × {axes[1]:.0f} m, "
+                  f"major axis {np.degrees(angle):.0f}° from East")
+        print(f"Saved {out / 'montecarlo.csv'} and {out / 'montecarlo.png'}")

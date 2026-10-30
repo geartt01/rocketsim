@@ -4,6 +4,8 @@ Buildup source: Niskanen 2009, §3.4 (equation numbers below are Niskanen's). Su
 the simulator warns above Mach 0.8. Every coefficient is referred to A_ref = π·d²/4.
 """
 
+import math
+
 import numpy as np
 
 
@@ -22,7 +24,7 @@ def skin_friction_coefficient(reynolds, roughness_ratio, mach):
     if reynolds < 1e4:
         cf = 1.48e-2
     elif reynolds < 51 * roughness_ratio**-1.039:
-        cf = 1 / (1.50 * np.log(reynolds) - 5.6) ** 2
+        cf = 1 / (1.50 * math.log(reynolds) - 5.6) ** 2
     else:
         cf = 0.032 * roughness_ratio**0.2
     return cf * (1 - 0.1 * mach**2)
@@ -50,16 +52,16 @@ def buildup_cd(rocket, mach, reynolds, thrusting):
     """
     f, a_ref, d = rocket.fins, rocket.area, rocket.body.diameter
     cf = skin_friction_coefficient(reynolds, rocket.roughness / rocket.length, mach)
-    wet_body = rocket.nose_surface + np.pi * d * rocket.body.length
+    wet_body = rocket.nose_surface + math.pi * d * rocket.body.length
     wet_fins = 2 * f.count * f.area
     friction = cf * ((1 + d / (2 * rocket.length)) * wet_body
                      + (1 + 2 * f.thickness / f.mac) * wet_fins) / a_ref
 
-    joint = np.arctan(rocket.radius / rocket.nose.length) if rocket.nose.shape == "cone" else 0.0
-    nose = 0.8 * np.sin(joint) ** 2
+    joint = math.atan(rocket.radius / rocket.nose.length) if rocket.nose.shape == "cone" else 0.0
+    nose = 0.8 * math.sin(joint) ** 2
 
     m = min(mach, 0.89)  # the subsonic leading-edge branch of eq. 3.89 holds for M < 0.9
-    cos2_le = np.cos(np.arctan(f.sweep / f.span)) ** 2
+    cos2_le = math.cos(math.atan(f.sweep / f.span)) ** 2
     if f.profile == "square":
         leading = 0.85 * (1 + m**2 / 4 + m**4 / 40) * cos2_le
     else:
@@ -67,18 +69,21 @@ def buildup_cd(rocket, mach, reynolds, thrusting):
     trailing = base_drag_coefficient(mach) * {"square": 1.0, "rounded": 0.5, "airfoil": 0.0}[f.profile]
     fin_pressure = (leading + trailing) * f.count * f.thickness * f.span / a_ref
 
-    base_area = a_ref - (np.pi * rocket.motor.diameter**2 / 4 if thrusting else 0.0)
+    base_area = a_ref - (math.pi * rocket.motor.diameter**2 / 4 if thrusting else 0.0)
     base = base_drag_coefficient(mach) * base_area / a_ref
     return friction + nose + fin_pressure + base
 
 
 def drag_coefficient(rocket, mach, reynolds, thrusting):
-    """C_D0 from the rocket's drag setting: "buildup", a constant, or a (mach, cd) table.
+    """C_D0 from the rocket's drag setting: "buildup", a constant, or a (mach, cd) table,
+    times rocket.cd_scale (1 unless a Monte Carlo run disperses it).
 
     A table is interpolated linearly in Mach and held constant beyond its ends.
     """
     if isinstance(rocket.drag, str):
-        return buildup_cd(rocket, mach, reynolds, thrusting)
-    if isinstance(rocket.drag, tuple):
-        return float(np.interp(mach, *rocket.drag))
-    return rocket.drag
+        cd = buildup_cd(rocket, mach, reynolds, thrusting)
+    elif isinstance(rocket.drag, tuple):
+        cd = float(np.interp(mach, *rocket.drag))
+    else:
+        cd = rocket.drag
+    return cd * rocket.cd_scale

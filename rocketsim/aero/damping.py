@@ -1,5 +1,7 @@
 """Pitch/yaw and roll damping (Niskanen 2009, §3.2.3 and §3.3.2)."""
 
+import math
+
 import numpy as np
 
 from rocketsim.geometry import nose_radius
@@ -17,17 +19,34 @@ def pitch_damping_coefficient(rocket, rho, x_cg, x_fin_cp):
     Assumptions: r̄ is the mean body radius of each side; a rough estimate is enough because the
     moment matters only when ω is large relative to v (e.g. near apogee).
     """
-    r = rocket.radius
-    x = np.linspace(0.0, rocket.length, 2001)
-    radius = np.where(x < rocket.nose.length,
-                      nose_radius(rocket.nose.shape, x, rocket.nose.length, r), r)
-    fore, aft = x <= x_cg, x >= x_cg
+    x, cumsum = body_profile(rocket)
+    n_fore = np.searchsorted(x, x_cg, side="right")  # samples with x ≤ x_cg
+    n_before_aft = np.searchsorted(x, x_cg, side="left")  # samples with x < x_cg
     body = 0.0
-    for side, length in ((fore, x_cg), (aft, rocket.length - x_cg)):
-        if length > 0 and side.any():
-            body += 0.275 * rho * radius[side].mean() * length**4
+    if x_cg > 0 and n_fore:
+        body += 0.275 * rho * cumsum[n_fore - 1] / n_fore * x_cg**4
+    if rocket.length > x_cg and n_before_aft < len(x):
+        aft_sum = cumsum[-1] - (cumsum[n_before_aft - 1] if n_before_aft else 0.0)
+        body += 0.275 * rho * aft_sum / (len(x) - n_before_aft) * (rocket.length - x_cg) ** 4
     f = rocket.fins
     return body + 0.3 * rho * min(f.count, 4) * f.area * abs(x_fin_cp - x_cg) ** 3
+
+
+def body_profile(rocket):
+    """Body radius r(x) on 2001 even samples and its running sum, cached on the rocket.
+
+    The running sum gives the mean radius fore/aft of any CG in O(1); it is rebuilt if the
+    nose or body geometry changes (tests edit them in place).
+    """
+    key = (rocket.nose.shape, rocket.nose.length, rocket.body.length, rocket.radius)
+    cached = getattr(rocket, "_profile", None)
+    if cached is None or cached[0] != key:
+        x = np.linspace(0.0, rocket.length, 2001)
+        radius = np.where(x < rocket.nose.length,
+                          nose_radius(rocket.nose.shape, x, rocket.nose.length, rocket.radius),
+                          rocket.radius)
+        cached = rocket._profile = (key, x, np.cumsum(radius))
+    return cached[1], cached[2]
 
 
 def trapezoid_roll_sum(fins, body_radius):
@@ -49,6 +68,6 @@ def roll_damping_coefficient(rocket, rho, speed, mach):
 
     Args: rho (kg/m³), speed |v_air| (m/s), mach (-). Valid subsonic, |ω·ξ| ≪ v.
     """
-    beta = np.sqrt(1 - min(mach, 0.99) ** 2)
+    beta = math.sqrt(1 - min(mach, 0.99) ** 2)
     f = rocket.fins
-    return 0.5 * rho * speed * f.count * 2 * np.pi / beta * trapezoid_roll_sum(f, rocket.radius)
+    return 0.5 * rho * speed * f.count * 2 * math.pi / beta * trapezoid_roll_sum(f, rocket.radius)

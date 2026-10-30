@@ -28,7 +28,7 @@ def conjugate(q):
 def normalize(v):
     """v / |v| (works for quaternions and plain vectors)."""
     v = np.asarray(v, dtype=float)
-    return v / np.linalg.norm(v)
+    return v / np.sqrt(v @ v)
 
 
 def rotation_matrix(q):

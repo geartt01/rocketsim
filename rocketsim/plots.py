@@ -41,6 +41,43 @@ def plot_flight(flight, path):
     fig.savefig(path, dpi=110)
 
 
+def plot_montecarlo(rows, stats, path):
+    """Apogee histogram, landing scatter with 1/2/3-σ ellipses, rail-exit speed and margin."""
+    from matplotlib.patches import Ellipse
+
+    ok = [r for r in rows if r["status"] == "ok"]
+    fig = Figure(figsize=(11, 9), layout="constrained")
+    (ax_apo, ax_land), (ax_rail, ax_margin) = fig.subplots(2, 2)
+    for ax, key, label, limit in ((ax_apo, "apogee", "apogee [m]", None),
+                                  (ax_rail, "rail_exit_velocity", "rail-exit speed [m/s]", 15.0),
+                                  (ax_margin, "margin_rail_exit", "margin at rail exit [cal]",
+                                   1.0)):
+        values = [r[key] for r in ok]
+        ax.hist(values, bins=30)
+        ax.axvline(np.mean(values), color="k", label="mean")
+        if limit is not None:
+            ax.axvline(limit, color="r", linestyle="--", label="guideline")
+        ax.set_xlabel(label)
+        ax.set_ylabel("runs")
+        ax.legend()
+    s = stats["apogee"]
+    ax_apo.set_title(f"mean {s['mean']:.1f} m, σ {s['std']:.1f} m, "
+                     f"5–95 % {s['p5']:.0f}–{s['p95']:.0f} m")
+
+    ax_land.scatter([r["landing_x"] for r in ok], [r["landing_y"] for r in ok], s=6)
+    ax_land.plot(0, 0, "k^", label="rail")
+    for k, (center, axes, angle) in stats.get("landing_ellipses", {}).items():
+        ax_land.add_patch(Ellipse(center, 2 * axes[0], 2 * axes[1], angle=np.degrees(angle),
+                                  fill=False, color="r", alpha=1.2 - 0.3 * k, label=f"{k}σ"))
+    ax_land.set_xlabel("East [m]")
+    ax_land.set_ylabel("North [m]")
+    ax_land.set_title(f"landing points ({len(ok)} of {len(rows)} runs)")
+    ax_land.set_aspect("equal", adjustable="datalim")
+    ax_land.legend()
+    ax_land.grid(True, alpha=0.3)
+    fig.savefig(path, dpi=110)
+
+
 def plot_3d(flight, path):
     """3-D trajectory in ENU."""
     tr = flight.trajectory

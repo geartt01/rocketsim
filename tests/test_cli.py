@@ -77,6 +77,17 @@ def test_bad_config_rejected(tmp_path, old, new, message):
         load_config(write(tmp_path, VALID.replace(old, new)))
 
 
+def test_cli_montecarlo(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    main(["montecarlo", str(EXAMPLE), "-n", "3", "--workers", "1", "--seed", "5"])
+    printed = capsys.readouterr().out
+    assert "3 runs" in printed and "Landing 2σ ellipse" in printed
+    out = tmp_path / "outputs" / "example_rocket"
+    rows = (out / "montecarlo.csv").read_text().splitlines()
+    assert len(rows) == 4 and rows[0].startswith("run,status,impulse_scale")
+    assert (out / "montecarlo.png").stat().st_size > 0
+
+
 def test_cli_run(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     main(["run", str(EXAMPLE)])

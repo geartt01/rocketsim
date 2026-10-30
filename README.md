@@ -26,6 +26,16 @@ This prints apogee, velocities, rail-exit speed, stability margin, descent rates
 | `flight.png` | Altitude, speed, acceleration, angle of attack, stability margin, ground track |
 | `trajectory_3d.png` | 3-D path in East-North-Up |
 
+## Monte Carlo (many flights with uncertain inputs)
+
+```bash
+python -m rocketsim montecarlo configs/example_rocket.yaml -n 500
+```
+
+This varies the inputs listed in the config's `dispersions:` section and flies all runs in parallel. It prints the apogee spread, rail-exit speed and stability-margin ranges, and the 1/2/3-σ landing ellipses. It saves `montecarlo.csv` (every run's inputs and results) and `montecarlo.png`.
+
+`--seed` makes results repeatable; the same seed always gives the same runs. `--workers` limits how many processes run at once. 500 runs take about 3 minutes on a 4-core laptop.
+
 ## Make your own rocket
 
 Copy `configs/example_rocket.yaml` and edit it. Every key is required unless marked optional, and typos are rejected with a message naming the key. Units are SI, angles are in degrees, and axial positions are measured from the nose tip, positive aft.

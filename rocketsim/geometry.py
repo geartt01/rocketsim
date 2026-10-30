@@ -143,7 +143,10 @@ class Rocket:
     roughness: float  # m, surface roughness height (Niskanen Table 3.2)
     drag: object  # "buildup" | float (constant Cd) | (mach array, cd array) table
     recovery: Recovery
-    _dry: tuple = field(init=False, repr=False)  # (mass, x_cg, I about x_cg) without motor
+    _dry: tuple = field(init=False, repr=False)  # (mass, x_cg, I_t, I_x) without motor
+    cd_scale: float = 1.0  # multiplies C_D0 (Monte Carlo dispersion)
+    thrust_misalignment: float = 0.0  # rad, thrust tilt off the body axis (6-DOF only)
+    misalignment_azimuth: float = 0.0  # rad, direction of that tilt about the body axis
 
     def __post_init__(self):
         r = self.radius
@@ -190,10 +193,17 @@ class Rocket:
                   [kg·m²], I_axial (roll) [kg·m²]).
         """
         mo = self.motor
+        burnt_out = np.ndim(t) == 0 and t >= mo.burn_time
+        key = (self._dry, id(mo))
+        if burnt_out and getattr(self, "_burnt", (None,))[0] == key:
+            return self._burnt[1]  # constant after burnout; the parachute phase asks ~10⁴ times
         m_motor = mo.total_mass_initial - mo.propellant_mass_initial + mo.propellant_mass(t)
         motor_part = (m_motor, self.motor_position - mo.length / 2,
                       *solid_cylinder_inertia(m_motor, mo.diameter / 2, mo.length))
-        return combine([self._dry, motor_part])
+        result = combine([self._dry, motor_part])
+        if burnt_out:
+            self._burnt = (key, result)
+        return result
 
 
 def combine(parts):

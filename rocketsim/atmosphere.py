@@ -1,5 +1,6 @@
 """International Standard Atmosphere (ISA), troposphere and lower stratosphere."""
 
+import math
 from typing import NamedTuple
 
 import numpy as np
@@ -55,18 +56,23 @@ def isa(z):
     Source: U.S. Standard Atmosphere 1976 (NOAA-S/T 76-1562), eqs. 18, 33a, 33b, 42, 50, 51;
     identical to ISO 2533:1975 below 20 km.
     """
-    z = np.asarray(z, dtype=float)
-    if not np.all((z >= Z_MIN) & (z <= Z_MAX)):  # written this way so NaN is rejected too
+    if np.ndim(z):
+        return Atmosphere(*np.vectorize(_isa, otypes=[float] * 5)(z))
+    return Atmosphere(*_isa(float(z)))  # plain floats: the simulator calls this every step
+
+
+def _isa(z):
+    """isa() for one altitude, in plain floats."""
+    if not Z_MIN <= z <= Z_MAX:  # written this way so NaN is rejected too
         raise ValueError(f"altitude outside ISA valid range [{Z_MIN}, {Z_MAX}] m: {z}")
     h = R_EARTH * z / (R_EARTH + z)
-    tropo = h <= H_TROPOPAUSE
-    T = np.where(tropo, T0 + LAPSE_TROPO * h, T_TROPOPAUSE)
-    p = np.where(
-        tropo,
-        P0 * (T / T0) ** (-G0 / (LAPSE_TROPO * R_AIR)),
-        P_TROPOPAUSE * np.exp(-G0 * (h - H_TROPOPAUSE) / (R_AIR * T_TROPOPAUSE)),
-    )
+    if h <= H_TROPOPAUSE:
+        T = T0 + LAPSE_TROPO * h
+        p = P0 * (T / T0) ** (-G0 / (LAPSE_TROPO * R_AIR))
+    else:
+        T = T_TROPOPAUSE
+        p = P_TROPOPAUSE * math.exp(-G0 * (h - H_TROPOPAUSE) / (R_AIR * T_TROPOPAUSE))
     rho = p / (R_AIR * T)
-    a = np.sqrt(GAMMA_AIR * R_AIR * T)
+    a = math.sqrt(GAMMA_AIR * R_AIR * T)
     mu = SUTHERLAND_BETA * T**1.5 / (T + SUTHERLAND_S)
-    return Atmosphere(T, p, rho, a, mu)
+    return T, p, rho, a, mu

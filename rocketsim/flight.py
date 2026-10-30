@@ -44,9 +44,9 @@ def _event_fn(fun, direction=1):
 apogee_event, landing_event = _event(1), _event(0)  # 1-DOF state [z, v]
 
 
-def run_phase(fun, t0, y0, t_end, args, events=(), rtol=1e-8, atol=1e-8):
-    """Integrate one flight phase with DOP853 until t_end or the first terminal event."""
-    return solve_ivp(fun, (t0, t_end), y0, method="DOP853", rtol=rtol, atol=atol,
+def run_phase(fun, t0, y0, t_end, args, events=(), rtol=1e-8, atol=1e-8, method="DOP853"):
+    """Integrate one flight phase until t_end or the first terminal event (DOP853 by default)."""
+    return solve_ivp(fun, (t0, t_end), y0, method=method, rtol=rtol, atol=atol,
                      events=list(events), args=args, dense_output=True)
 
 
@@ -146,7 +146,7 @@ def simulate_1dof(rocket, rtol=1e-8, atol=1e-8, dt_out=0.01):
     return Flight(trajectory, events, summary)
 
 
-def _fly(model, rocket, launch, rtol=1e-8, atol=1e-8, dt_out=0.01):
+def _fly(model, rocket, launch, rtol=1e-8, atol=1e-8, dt_out=0.01, method="DOP853"):
     """Rail-launched flight with a 3-DOF (dof3) or 6-DOF (dof6) model, pad to landing.
 
     After apogee: free fall for the drogue delay ("freefall"), then the drogue ("drogue"),
@@ -166,8 +166,10 @@ def _fly(model, rocket, launch, rtol=1e-8, atol=1e-8, dt_out=0.01):
                if that phase does not happen), opening_shock_g (peak parachute drag / weight),
                landing_velocity (m/s, descent rate), flight_time (s).
     Warns when Mach > 0.8, rail-exit speed < 15 m/s or margin at rail exit < 1 caliber.
+    method/rtol/atol go to solve_ivp for every phase (Monte Carlo trades accuracy for speed).
     """
-    motor, args, tol = rocket.motor, (rocket, launch), {"rtol": rtol, "atol": atol}
+    motor, args = rocket.motor, (rocket, launch)
+    tol = {"rtol": rtol, "atol": atol, "method": method}
     rail_exit = _event_fn(model.rail_exit)
     apogee, landing = _event(model.VZ), _event(model.Z)
 
@@ -246,9 +248,6 @@ def _fly(model, rocket, launch, rtol=1e-8, atol=1e-8, dt_out=0.01):
     tr = {n: np.array([r[i] for r in rows]) for i, n in enumerate(names)}
 
     ascent = np.isin(tr["phase"], ("powered", "coast"))
-    under_chute = np.isin(tr["phase"], ("drogue", "main"))
-    specific_force = np.linalg.norm([tr[a] for a in accel_names[:-1]]
-                                    + [tr[accel_names[-1]] + launch.g], axis=0)
     horizontal = list(model.HORIZONTAL)
     summary = {
         "apogee": float(coast.y[model.Z, -1]),
@@ -265,12 +264,30 @@ def _fly(model, rocket, launch, rtol=1e-8, atol=1e-8, dt_out=0.01):
         "margin_rail_exit": margin_exit,
         "min_margin": float(tr["margin"][ascent].min()),
         **descent,
-        "opening_shock_g": float(specific_force[under_chute].max() / G0),
+        "opening_shock_g": max(_opening_shock(model, s, launch.g)
+                               for s in segments if s[3] in ("drogue", "main")),
         "landing_velocity": float(-y[model.VZ]),
         "flight_time": events["landing"] - events["liftoff"],
     }
     _warn_mach(summary["max_mach"])
     return Flight(tr, events, summary)
+
+
+def _opening_shock(model, segment, g, window=3.0, step=1e-3):
+    """Peak parachute load in g, |a + g·ẑ|/g, on a 1 ms grid over the canopy fill + 3 s.
+
+    Scanned separately from the trajectory output so the peak does not depend on dt_out.
+    """
+    sol, fun, args, _, fills = segment
+    t0 = sol.t[0]
+    t1 = min(sol.t[-1], max(fills) + window)
+    peak = 0.0
+    for t in np.linspace(t0, t1, max(2, int((t1 - t0) / step) + 1)):
+        d = fun(t, sol.sol(t), *args)
+        a = [d[i] for i in model.VELOCITY]
+        a[-1] += g
+        peak = max(peak, float(np.sqrt(np.dot(a, a))))
+    return peak / G0
 
 
 def _row(model, t, y, fun, args, phase):

@@ -52,8 +52,8 @@ def load_config(path):
 
     cfg = yaml.safe_load(path.read_text(encoding="utf-8"))
     top = ("rocket", "motor", "recovery", "launch", "wind")
-    if not isinstance(cfg, dict) or set(cfg) != set(top):
-        fail(f"top-level keys must be exactly {list(top)}")
+    if not isinstance(cfg, dict) or set(cfg) - {"dispersions"} != set(top):
+        fail(f"top-level keys must be exactly {list(top)} (plus optional dispersions)")
 
     r = section(cfg, "rocket", "rocket", ("nose", "body", "fins", "masses", "motor_position",
                                           "surface_roughness", "drag"))

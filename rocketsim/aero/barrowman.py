@@ -5,7 +5,7 @@ an Open Source Model Rocket Simulation Software", §3.2. Equation numbers below 
 CP positions are from the nose tip, positive aft. Valid for small α and Mach < ~0.8.
 """
 
-import numpy as np
+import math
 
 # Fin–fin interference for N fins in one set (Niskanen eq. 3.54)
 _FIN_INTERFERENCE = {5: 0.948, 6: 0.913, 7: 0.854, 8: 0.810}
@@ -42,9 +42,9 @@ def fins_cn_alpha_cp(rocket, mach):
     """
     f = rocket.fins
     cr, ct, s, xt = f.root_chord, f.tip_chord, f.span, f.sweep
-    beta = np.sqrt(1 - min(mach, 0.99) ** 2)
-    cos_gc = np.cos(np.arctan((xt + ct / 2 - cr / 2) / s))
-    cn1 = 2 * np.pi * s**2 / rocket.area / (1 + np.sqrt(1 + (beta * s**2 / (f.area * cos_gc)) ** 2))
+    beta = math.sqrt(1 - min(mach, 0.99) ** 2)
+    cos_gc = math.cos(math.atan((xt + ct / 2 - cr / 2) / s))
+    cn1 = 2 * math.pi * s**2 / rocket.area / (1 + math.sqrt(1 + (beta * s**2 / (f.area * cos_gc)) ** 2))
     interference = _FIN_INTERFERENCE.get(f.count, 1.0 if f.count < 5 else 0.75)
     k_tb = 1 + rocket.radius / (s + rocket.radius)
     x_f = f.position + xt / 3 * (cr + 2 * ct) / (cr + ct) + (cr**2 + ct**2 + cr * ct) / (6 * (cr + ct))

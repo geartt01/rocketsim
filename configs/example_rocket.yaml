@@ -51,3 +51,22 @@ wind:
   direction: 270.0        # deg clockwise from North the wind blows FROM (270 = from the West)
   reference_height: 10.0  # m
   profile: power_law      # constant | power_law (1/7 exponent)
+
+# Monte Carlo (python -m rocketsim montecarlo ...). Each entry: {normal: [mean, sigma]} or
+# {uniform: [low, high]}. *_scale multiply the nominal; the others add to it, except
+# thrust_misalignment and gust_intensity (absolute). Omitted parameters are not varied.
+# Spreads below are illustrative, typical of hobby-rocket uncertainty.
+dispersions:
+  impulse_scale:       {normal: [1.0, 0.03]}
+  burn_time_scale:     {normal: [1.0, 0.03]}
+  cd_scale:            {normal: [1.0, 0.07]}
+  dry_mass:            {normal: [0.0, 0.001]}   # kg
+  cg_offset:           {normal: [0.0, 0.005]}   # m, aft positive
+  rail_elevation:      {normal: [0.0, 1.0]}     # deg
+  rail_heading:        {normal: [0.0, 3.0]}     # deg
+  thrust_misalignment: {normal: [0.0, 0.2]}     # deg
+  wind_speed:          {normal: [0.0, 1.0]}     # m/s
+  wind_direction:      {normal: [0.0, 15.0]}    # deg
+  gust_intensity:      {uniform: [0.0, 0.6]}    # m/s, turbulence sigma (~10-20 % of the wind)
+  chute_cda_scale:     {normal: [1.0, 0.07]}
+  drogue_delay:        {uniform: [0.0, 1.0]}    # s

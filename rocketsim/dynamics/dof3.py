@@ -40,9 +40,9 @@ def air(launch, z):
     return rho, atm.a, atm.mu / atm.rho
 
 
-def downrange_wind(launch, z):
-    """Wind component along the rail heading, m/s (positive blows downrange)."""
-    w = launch.wind.vector(z)
+def downrange_wind(launch, z, t):
+    """Wind component along the rail heading at height z, time t, m/s (+ blows downrange)."""
+    w = launch.wind.vector(z, t)
     return w[0] * np.sin(launch.rail_heading) + w[1] * np.cos(launch.rail_heading)
 
 
@@ -75,7 +75,7 @@ def aero_forces(t, y, rocket, launch):
     m, x_cg, inertia, _ = rocket.mass_properties(t)
     rho, sound, nu = air(launch, z)
     ex, ez = np.cos(theta), np.sin(theta)
-    vax, vaz = vx - downrange_wind(launch, z), vz
+    vax, vaz = vx - downrange_wind(launch, z, t), vz
     speed = np.hypot(vax, vaz)
     mach = speed / sound
     v_axial = vax * ex + vaz * ez
@@ -133,7 +133,7 @@ def derivatives_chute(t, y, rocket, launch, deployments):
     """
     m = rocket.mass_properties(t)[0]
     rho = air(launch, y[1])[0]
-    vax, vaz = y[2] - downrange_wind(launch, y[1]), y[3]
+    vax, vaz = y[2] - downrange_wind(launch, y[1], t), y[3]
     k = -0.5 * rho * open_cda(t, deployments) * np.hypot(vax, vaz) / m
     return [y[2], y[3], k * vax, k * vaz - launch.g, 0.0, 0.0]
 
