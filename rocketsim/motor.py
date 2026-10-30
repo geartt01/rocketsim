@@ -91,7 +91,9 @@ def load_eng(path):
             fail(f"{what} is not a number: {text!r}", lineno)
 
     lines = []
-    for lineno, raw in enumerate(path.read_text().splitlines(), start=1):
+    # errors="replace": odd bytes can only matter in comments, which are discarded
+    text_lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    for lineno, raw in enumerate(text_lines, start=1):
         text = raw.split(";", 1)[0].strip()
         if text:
             lines.append((lineno, text.split()))
@@ -133,6 +135,8 @@ def load_eng(path):
         fail("no thrust data after the header")
     if times[-1] <= 0:
         fail("thrust curve must end at a positive time")
+    if max(thrusts) == 0:
+        fail("thrust curve has no thrust (all values are 0)")
     if times[0] > 0:
         times.insert(0, 0.0)
         thrusts.insert(0, 0.0)

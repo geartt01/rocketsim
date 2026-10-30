@@ -55,6 +55,12 @@ def test_propellant_mass(motor):
     assert np.all(np.diff(m) <= 0)
 
 
+def test_utf8_comment_accepted(tmp_path):
+    path = tmp_path / "utf8.eng"
+    path.write_text("; Łukasz µ °\n" + HEADER + "\n0.1 5\n0.2 0\n", encoding="utf-8")
+    assert load_eng(path).total_impulse > 0
+
+
 @pytest.mark.parametrize(
     ("text", "message"),
     [
@@ -68,6 +74,7 @@ def test_propellant_mass(motor):
         (HEADER + "\n0.1 5\n0.2 0\n" + HEADER + "\n0.1 5\n", "multiple motors"),
         ("TEST 24 70 P 0.03 0.02 Test\n0.1 5\n", "propellant mass"),
         (HEADER + "\n0.0 0\n", "positive time"),
+        (HEADER + "\n0.1 0\n0.2 0\n", "no thrust"),
     ],
 )
 def test_malformed_file_rejected(tmp_path, text, message):

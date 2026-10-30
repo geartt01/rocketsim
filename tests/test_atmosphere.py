@@ -42,3 +42,5 @@ def test_out_of_range_raises():
         isa(25e3)
     with pytest.raises(ValueError, match="valid range"):
         isa(-3e3)
+    with pytest.raises(ValueError, match="valid range"):
+        isa(float("nan"))

@@ -56,7 +56,7 @@ def isa(z):
     identical to ISO 2533:1975 below 20 km.
     """
     z = np.asarray(z, dtype=float)
-    if np.any((z < Z_MIN) | (z > Z_MAX)):
+    if not np.all((z >= Z_MIN) & (z <= Z_MAX)):  # written this way so NaN is rejected too
         raise ValueError(f"altitude outside ISA valid range [{Z_MIN}, {Z_MAX}] m: {z}")
     h = R_EARTH * z / (R_EARTH + z)
     tropo = h <= H_TROPOPAUSE
