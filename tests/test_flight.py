@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 
 from rocketsim.constants import G0
-from rocketsim.dynamics.dof1 import Rocket1D
-from rocketsim.flight import apogee_event, landing_event, liftoff_time, run_phase, simulate
+from rocketsim.dynamics.dof1 import Rocket1D, derivatives
+from rocketsim.flight import apogee_event, landing_event, liftoff_time, run_phase, simulate_1dof
 from rocketsim.io import load_config
 from rocketsim.motor import Motor, load_eng
 
@@ -25,6 +25,13 @@ def make_rocket(motor=None, **overrides):
     return Rocket1D(motor=motor or load_eng(TEST_ENG), **(params | overrides))
 
 
+def example_rocket_1dof():
+    """The example config's mass, diameter and real C6 motor with a constant Cd of 0.5."""
+    rocket, launch = load_config(ROOT / "configs" / "example_rocket.yaml")
+    return Rocket1D(rocket.dry_mass, rocket.body.diameter, 0.5, rocket.motor, rocket.chute_cda,
+                    launch.site_altitude)
+
+
 def constant_thrust_motor(thrust, burn_time, prop_mass, total_mass):
     times, thrusts = np.array([0.0, burn_time]), np.array([thrust, thrust])
     return Motor("CONST", 0.024, 0.07, "P", prop_mass, total_mass, "Test", times, thrusts)
@@ -34,7 +41,7 @@ def test_vacuum_coast_apogee():
     v0 = 50.0
     rocket = make_rocket(density=lambda z: 0.0)
     t0 = rocket.motor.burn_time + 1.0  # motor finished: no thrust, constant mass
-    sol = run_phase(rocket, t0, [0.0, v0], t0 + 100.0, events=[apogee_event])
+    sol = run_phase(derivatives, t0, [0.0, v0], t0 + 100.0, (rocket, False), [apogee_event])
     assert sol.y_events[0][0][0] == pytest.approx(v0**2 / (2 * G0), rel=1e-6)
 
 
@@ -45,7 +52,7 @@ def test_rocket_equation():
     m0, mf = rocket.mass(0.0), rocket.mass(burn)
     assert m0 - mf == pytest.approx(m_prop)
     v_e = thrust * burn / m_prop  # constant thrust => constant mass flow F / v_e
-    sol = run_phase(rocket, 0.0, [0.0, 0.0], burn)
+    sol = run_phase(derivatives, 0.0, [0.0, 0.0], burn, (rocket, False))
     assert sol.y[1, -1] == pytest.approx(v_e * np.log(m0 / mf), rel=1e-6)
 
 
@@ -53,46 +60,44 @@ def test_terminal_velocity_under_chute():
     rho = 1.1
     rocket = make_rocket(density=lambda z: rho)
     t0 = rocket.motor.burn_time + 1.0
-    sol = run_phase(rocket, t0, [500.0, 0.0], t0 + 1000.0, events=[landing_event], chute=True)
+    sol = run_phase(derivatives, t0, [500.0, 0.0], t0 + 1000.0, (rocket, True), [landing_event])
     v_terminal = np.sqrt(2 * rocket.mass(t0) * G0 / (rho * rocket.chute_cda))
     assert sol.y_events[0][0][1] == pytest.approx(-v_terminal, rel=1e-6)
 
 
-@pytest.mark.parametrize(
-    "rocket",
-    [make_rocket(), load_config(ROOT / "configs" / "example_rocket.yaml")],
-    ids=["test-motor", "example-config"],
-)
+@pytest.mark.parametrize("rocket", [make_rocket(), example_rocket_1dof()],
+                         ids=["test-motor", "example-config"])
 def test_matches_oracle(rocket):
     m = rocket.motor
     ref = oracle.simulate(rocket.dry_mass, rocket.diameter, rocket.cd, m.time, m.thrust_data,
                           m.propellant_mass_initial, m.total_mass_initial)
-    assert simulate(rocket).summary["apogee"] == pytest.approx(ref["apogee"], rel=5e-3)
+    assert simulate_1dof(rocket).summary["apogee"] == pytest.approx(ref["apogee"], rel=5e-3)
 
 
 def test_tolerance_convergence():
     rocket = make_rocket()
-    coarse = simulate(rocket, rtol=1e-8, atol=1e-8).summary["apogee"]
-    fine = simulate(rocket, rtol=1e-9, atol=1e-9).summary["apogee"]
+    coarse = simulate_1dof(rocket, rtol=1e-8, atol=1e-8).summary["apogee"]
+    fine = simulate_1dof(rocket, rtol=1e-9, atol=1e-9).summary["apogee"]
     assert abs(fine - coarse) / fine < 1e-4
 
 
 def test_stays_on_pad_until_thrust_exceeds_weight():
     rocket = make_rocket(dry_mass=0.5)  # weight ≈ 5 N; test motor ramps 0 → 10 N in 0.05 s
-    t = liftoff_time(rocket)
+    t = liftoff_time(rocket.motor, rocket.mass, rocket.g)
     assert 0.0 < t < 0.05
     assert rocket.motor.thrust(t) == pytest.approx(rocket.mass(t) * G0, rel=1e-9)
-    assert simulate(rocket).events["liftoff"] == t
+    assert simulate_1dof(rocket).events["liftoff"] == t
 
 
 def test_too_heavy_never_leaves_pad():
+    rocket = make_rocket(dry_mass=5.0)
     with pytest.raises(ValueError, match="never exceeds weight"):
-        liftoff_time(make_rocket(dry_mass=5.0))
+        liftoff_time(rocket.motor, rocket.mass, rocket.g)
 
 
 def test_full_flight_sequence():
     rocket = make_rocket()
-    flight = simulate(rocket)
+    flight = simulate_1dof(rocket)
     ev = flight.events
     assert ev["liftoff"] < ev["burnout"] < ev["apogee"] < ev["landing"]
     assert flight.trajectory["z"].min() > -1e-6

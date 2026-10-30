@@ -3,6 +3,8 @@
 import argparse
 from pathlib import Path
 
+import numpy as np
+
 from rocketsim.flight import simulate
 from rocketsim.io import load_config, write_trajectory_csv
 from rocketsim.plots import plot_flight
@@ -15,17 +17,22 @@ def main(argv=None):
     run.add_argument("config", help="rocket config YAML")
     args = parser.parse_args(argv)
 
-    flight = simulate(load_config(args.config))
+    flight = simulate(*load_config(args.config))
     out = Path("outputs") / Path(args.config).stem
     out.mkdir(parents=True, exist_ok=True)
     write_trajectory_csv(flight, out / "trajectory.csv")
     plot_flight(flight, out / "flight.png")
 
     s = flight.summary
-    print(f"Apogee            {s['apogee']:8.1f} m")
-    print(f"Time to apogee    {s['time_to_apogee']:8.2f} s")
-    print(f"Max velocity      {s['max_velocity']:8.1f} m/s  (Mach {s['max_mach']:.2f})")
-    print(f"Max acceleration  {s['max_accel_g']:8.1f} g")
-    print(f"Landing velocity  {s['landing_velocity']:8.2f} m/s")
-    print(f"Flight time       {s['flight_time']:8.1f} s")
+    print(f"Apogee              {s['apogee']:8.1f} m   ({s['apogee_x']:+.1f} m downrange)")
+    print(f"Time to apogee      {s['time_to_apogee']:8.2f} s")
+    print(f"Max velocity        {s['max_velocity']:8.1f} m/s  (Mach {s['max_mach']:.2f})")
+    print(f"Max acceleration    {s['max_accel_g']:8.1f} g")
+    print(f"Rail-exit velocity  {s['rail_exit_velocity']:8.1f} m/s")
+    print(f"Stability margin    {s['margin_rail_exit']:8.2f} cal at rail exit "
+          f"(min {s['min_margin']:.2f})")
+    print(f"Max angle of attack {np.degrees(s['max_alpha']):8.1f} deg")
+    print(f"Landing velocity    {s['landing_velocity']:8.2f} m/s")
+    print(f"Drift               {s['drift']:8.1f} m downrange")
+    print(f"Flight time         {s['flight_time']:8.1f} s")
     print(f"Saved {out / 'trajectory.csv'} and {out / 'flight.png'}")

@@ -1,15 +1,44 @@
-# Example rocket: a generic small single-stage model rocket on an Estes C6.
-# The airframe numbers are illustrative, not a specific kit. SI units throughout.
+# Example rocket: a generic small single-stage model rocket (BT-50 size) on an Estes C6.
+# The airframe numbers are illustrative, not a specific kit. SI units; angles in degrees.
+# Axial positions are measured from the nose tip, positive aft.
 
 rocket:
-  dry_mass: 0.035      # kg, everything except the motor
-  diameter: 0.0248     # m, reference (body tube) diameter, BT-50 size
-  cd: 0.5              # -, constant drag coefficient (Stage 1 model)
+  nose:
+    shape: ogive          # cone | ogive (tangent) | elliptical | von_karman
+    length: 0.080         # m
+    mass: 0.005           # kg
+  body:
+    length: 0.300         # m, tube from nose base to aft end
+    diameter: 0.0248      # m, outer diameter (BT-50)
+    mass: 0.012           # kg
+  fins:
+    count: 3
+    root_chord: 0.060     # m
+    tip_chord: 0.030      # m
+    span: 0.045           # m, root to tip
+    sweep: 0.030          # m, tip leading edge aft of root leading edge
+    thickness: 0.0024     # m (3/32" balsa)
+    position: 0.320       # m, nose tip to root leading edge (fins end flush with the tube)
+    profile: rounded      # square | rounded | airfoil
+    mass: 0.005           # kg, whole set
+  masses:                 # point masses; add length + radius for a solid cylinder
+    - {name: parachute and shock cord, mass: 0.008, position: 0.140}
+    - {name: motor mount and hook, mass: 0.004, position: 0.330}
+  motor_position: 0.380   # m, nose tip to the motor's aft end (flush with the tube)
+  surface_roughness: 60.0e-6   # m, regular paint (Niskanen Table 3.2 ranges 5-200 um)
+  drag: buildup           # buildup | a constant Cd (e.g. 0.5) | path to a 'mach,cd' CSV
 
 motor: ../motors/Estes_C6.eng   # RASP file, path relative to this config file
 
 recovery:
-  chute_cda: 0.0565    # m^2, Cd*A of a 30 cm parachute (Cd 0.8 * pi * 0.15^2)
+  chute_cda: 0.0565       # m^2, Cd*A of a 30 cm parachute (Cd 0.8 * pi * 0.15^2)
 
 launch:
-  elevation: 0.0       # m above mean sea level of the launch site
+  site_altitude: 0.0      # m above mean sea level
+  rail_length: 0.9        # m travelled along the launch rod before the rocket is free
+  rail_elevation: 85.0    # deg above horizontal, tilted downrange (+x)
+
+wind:
+  speed: 3.0              # m/s at reference_height, blowing downrange (+x); negative = toward the rail
+  reference_height: 10.0  # m
+  profile: power_law      # constant | power_law (1/7 exponent)
