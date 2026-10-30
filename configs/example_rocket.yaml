@@ -1,0 +1,15 @@
+# Example rocket: a generic small single-stage model rocket on an Estes C6.
+# The airframe numbers are illustrative, not a specific kit. SI units throughout.
+
+rocket:
+  dry_mass: 0.035      # kg, everything except the motor
+  diameter: 0.0248     # m, reference (body tube) diameter, BT-50 size
+  cd: 0.5              # -, constant drag coefficient (Stage 1 model)
+
+motor: ../motors/Estes_C6.eng   # RASP file, path relative to this config file
+
+recovery:
+  chute_cda: 0.0565    # m^2, Cd*A of a 30 cm parachute (Cd 0.8 * pi * 0.15^2)
+
+launch:
+  elevation: 0.0       # m above mean sea level of the launch site
