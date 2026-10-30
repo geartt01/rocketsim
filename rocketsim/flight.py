@@ -1,7 +1,7 @@
 """Phase managers.
 
-1-DOF (Stage 1):  pad → powered → coast → parachute → landed
-3-DOF (Stage 2):  pad → rail → powered → coast → parachute → landed
+1-DOF (Stage 1):        pad → powered → coast → parachute → landed
+3-DOF / 6-DOF (2, 3):   pad → rail → powered → coast → parachute → landed
 
 Each phase is one solve_ivp (DOP853) call that ends exactly on its event, so the integrator
 never steps across a jump in thrust, drag or constraints (PLAN.md §3).
@@ -9,6 +9,7 @@ never steps across a jump in thrust, drag or constraints (PLAN.md §3).
 
 import warnings
 from dataclasses import dataclass
+from functools import partial
 
 import numpy as np
 from scipy.integrate import solve_ivp
@@ -16,7 +17,7 @@ from scipy.optimize import brentq
 
 from rocketsim.atmosphere import isa
 from rocketsim.constants import G0
-from rocketsim.dynamics import dof1, dof3
+from rocketsim.dynamics import dof1, dof3, dof6
 
 T_PHASE_MAX = 3600.0  # s, safety cap on any one phase so a bad config cannot loop forever
 MACH_LIMIT = 0.8  # validity limit of the aero model (PLAN.md §3)
@@ -32,16 +33,15 @@ def _event(index, direction=-1):
     return event
 
 
+def _event_fn(fun, direction=1):
+    """Terminal event from a function of (t, y, *args) crossing zero in the given direction."""
+    def event(t, y, *args):
+        return fun(t, y, *args)
+    event.terminal, event.direction = True, direction
+    return event
+
+
 apogee_event, landing_event = _event(1), _event(0)  # 1-DOF state [z, v]
-apogee_event_3, landing_event_3 = _event(3), _event(1)  # 3-DOF state [x, z, vx, vz, θ, ω]
-
-
-def rail_exit_event(t, y, rocket, launch):
-    """Zero when the distance travelled along the rail reaches the rail length."""
-    return y[0] * np.cos(y[4]) + y[1] * np.sin(y[4]) - launch.rail_length
-
-
-rail_exit_event.terminal, rail_exit_event.direction = True, 1
 
 
 def run_phase(fun, t0, y0, t_end, args, events=(), rtol=1e-8, atol=1e-8):
@@ -70,9 +70,9 @@ def liftoff_time(motor, mass, g):
 
 @dataclass
 class Flight:
-    trajectory: dict  # column name → array; see simulate()
+    trajectory: dict  # column name → array
     events: dict  # event name → time since ignition, s
-    summary: dict  # see simulate()
+    summary: dict
 
 
 def _check(sol, phase, what):
@@ -146,30 +146,33 @@ def simulate_1dof(rocket, rtol=1e-8, atol=1e-8, dt_out=0.01):
     return Flight(trajectory, events, summary)
 
 
-def simulate(rocket, launch, rtol=1e-8, atol=1e-8, dt_out=0.01):
-    """3-DOF planar flight of a geometry.Rocket from the pad to landing.
+def _fly(model, rocket, launch, rtol=1e-8, atol=1e-8, dt_out=0.01):
+    """Rail-launched flight with a 3-DOF (dof3) or 6-DOF (dof6) model, pad to landing.
 
     Returns Flight with
-      trajectory: t (s), x, z (m), vx, vz (m/s), ax, az (m/s²), theta (rad), alpha (rad),
-                  mach (-), margin (calibers, NaN under parachute), mass (kg), phase;
+      trajectory: t, the model's state columns (model.STATE), accelerations a<axis> (m/s²),
+                  alpha (rad), mach (-), margin (calibers; NaN under parachute), mass (kg),
+                  phase;
       events: liftoff, rail_exit, burnout, apogee, landing (s since ignition);
-      summary: apogee, apogee_x (m), time_to_apogee (s), max_velocity (m/s), max_accel_g,
-               max_mach, max_alpha (rad), rail_exit_velocity (m/s), margin_rail_exit,
-               min_margin (calibers, rail exit → apogee), landing_velocity (m/s, descent
-               rate), drift (m, landing x), flight_time (s).
+      summary: apogee (m), apogee_position and landing_position (horizontal coordinates, m),
+               drift (m, horizontal distance pad → landing), time_to_apogee (s),
+               max_velocity (m/s), max_accel_g, max_mach, max_alpha (rad, powered + coast),
+               rail_exit_velocity (m/s), margin_rail_exit and min_margin (calibers),
+               landing_velocity (m/s, descent rate), flight_time (s).
     Warns when Mach > 0.8, rail-exit speed < 15 m/s or margin at rail exit < 1 caliber.
     """
     motor, args, tol = rocket.motor, (rocket, launch), {"rtol": rtol, "atol": atol}
-    th0 = launch.rail_elevation
+    rail_exit = _event_fn(model.rail_exit)
+    apogee, landing = _event(model.VZ), _event(model.Z)
+
     events = {"liftoff": liftoff_time(motor, lambda t: rocket.mass_properties(t)[0],
-                                      launch.g * np.sin(th0))}
-    y0 = [0.0, 0.0, 0.0, 0.0, th0, 0.0]
-    rail = run_phase(dof3.derivatives_rail, events["liftoff"], y0, motor.burn_time, args,
-                     [rail_exit_event], **tol)
+                                      launch.g * np.sin(launch.rail_elevation))}
+    rail = run_phase(model.derivatives_rail, events["liftoff"], model.initial_state(launch),
+                     motor.burn_time, args, [rail_exit], **tol)
     _check(rail, "rail", "still on the rail at burnout: rail too long or motor too weak")
     events["rail_exit"] = rail.t[-1]
-    exit_speed = float(np.hypot(rail.y[2, -1], rail.y[3, -1]))
-    margin_exit = float(dof3.aero_forces(rail.t[-1], rail.y[:, -1], *args)[5][2])
+    exit_speed = float(np.linalg.norm(rail.y[list(model.VELOCITY), -1]))
+    margin_exit = float(model.info(rail.t[-1], rail.y[:, -1], *args)[2])
     # warn now, before free flight, so the warning survives if an unstable flight fails later
     if exit_speed < RAIL_EXIT_MIN:
         warnings.warn(f"rail-exit velocity {exit_speed:.1f} m/s is below {RAIL_EXIT_MIN} m/s",
@@ -178,64 +181,71 @@ def simulate(rocket, launch, rtol=1e-8, atol=1e-8, dt_out=0.01):
         warnings.warn(f"stability margin {margin_exit:.2f} cal at rail exit is below "
                       f"{MARGIN_MIN}", stacklevel=2)
 
-    powered = run_phase(dof3.derivatives, rail.t[-1], rail.y[:, -1], motor.burn_time, args,
-                        [apogee_event_3, landing_event_3], **tol)
+    powered = run_phase(model.derivatives, rail.t[-1], model.normalize(rail.y[:, -1]),
+                        motor.burn_time, args, [apogee, landing], **tol)
     if powered.status == 1:
         # shortcut: apogee or fall-back during the burn is not modelled; Stage 4 adds delays.
         raise ValueError("rocket stopped climbing before burnout: motor too weak for this rocket")
     events["burnout"] = motor.burn_time
-    coast = run_phase(dof3.derivatives, motor.burn_time, powered.y[:, -1],
-                      motor.burn_time + T_PHASE_MAX, args, [apogee_event_3], **tol)
+    coast = run_phase(model.derivatives, motor.burn_time, model.normalize(powered.y[:, -1]),
+                      motor.burn_time + T_PHASE_MAX, args, [apogee], **tol)
     _check(coast, "coast", f"no apogee within {T_PHASE_MAX} s of burnout")
     events["apogee"] = coast.t[-1]
-    chute = run_phase(dof3.derivatives_chute, coast.t[-1], coast.y[:, -1],
-                      coast.t[-1] + T_PHASE_MAX, args, [landing_event_3], **tol)
+    chute = run_phase(model.derivatives_chute, coast.t[-1], model.normalize(coast.y[:, -1]),
+                      coast.t[-1] + T_PHASE_MAX, args, [landing], **tol)
     _check(chute, "parachute", f"no landing within {T_PHASE_MAX} s of apogee")
     events["landing"] = chute.t[-1]
 
-    names = ("t", "x", "z", "vx", "vz", "ax", "az", "theta", "alpha", "mach", "margin", "mass",
-             "phase")
+    accel_names = tuple("a" + model.STATE[i][1:] for i in model.VELOCITY)
+    names = ("t", *model.STATE, *accel_names, "alpha", "mach", "margin", "mass", "phase")
     rows = []
-    phases = ((rail, dof3.derivatives_rail, "rail", motor.time),
-              (powered, dof3.derivatives, "powered", motor.time),
-              (coast, dof3.derivatives, "coast", ()),
-              (chute, dof3.derivatives_chute, "parachute", ()))
+    phases = ((rail, model.derivatives_rail, "rail", motor.time),
+              (powered, model.derivatives, "powered", motor.time),
+              (coast, model.derivatives, "coast", ()),
+              (chute, model.derivatives_chute, "parachute", ()))
     for sol, fun, phase, extra in phases:
         for t in _times(sol, dt_out, extra):
-            rows.append(_row(t, sol.sol(t), fun, rocket, launch, phase))
-    rows.append(_row(chute.t[-1], chute.y[:, -1], dof3.derivatives_chute, rocket, launch,
-                     "landed"))
-    trajectory = {n: np.array([r[i] for r in rows]) for i, n in enumerate(names)}
+            rows.append(_row(model, t, sol.sol(t), fun, rocket, launch, phase))
+    rows.append(_row(model, chute.t[-1], chute.y[:, -1], None, rocket, launch, "landed"))
+    tr = {n: np.array([r[i] for r in rows]) for i, n in enumerate(names)}
 
-    tr, ascent = trajectory, np.isin(trajectory["phase"], ("powered", "coast"))
-    speed = np.hypot(tr["vx"], tr["vz"])
+    ascent = np.isin(tr["phase"], ("powered", "coast"))
+    horizontal = list(model.HORIZONTAL)
+    landing_position = chute.y[horizontal, -1]
     summary = {
-        "apogee": float(coast.y[1, -1]),
-        "apogee_x": float(coast.y[0, -1]),
+        "apogee": float(coast.y[model.Z, -1]),
+        "apogee_position": tuple(float(c) for c in coast.y[horizontal, -1]),
+        "landing_position": tuple(float(c) for c in landing_position),
+        "drift": float(np.linalg.norm(landing_position)),
         "time_to_apogee": events["apogee"] - events["liftoff"],
-        "max_velocity": float(speed.max()),
-        "max_accel_g": float(np.hypot(tr["ax"], tr["az"]).max() / G0),
+        "max_velocity": float(np.linalg.norm([tr[model.STATE[i]] for i in model.VELOCITY],
+                                             axis=0).max()),
+        "max_accel_g": float(np.linalg.norm([tr[a] for a in accel_names], axis=0).max() / G0),
         "max_mach": float(np.nanmax(tr["mach"])),
         "max_alpha": float(np.abs(tr["alpha"][ascent]).max()),
         "rail_exit_velocity": exit_speed,
         "margin_rail_exit": margin_exit,
         "min_margin": float(tr["margin"][ascent].min()),
-        "landing_velocity": float(-chute.y[3, -1]),
-        "drift": float(chute.y[0, -1]),
+        "landing_velocity": float(-chute.y[model.VZ, -1]),
         "flight_time": events["landing"] - events["liftoff"],
     }
     _warn_mach(summary["max_mach"])
-    return Flight(trajectory, events, summary)
+    return Flight(tr, events, summary)
 
 
-def _row(t, y, fun, rocket, launch, phase):
+def _row(model, t, y, fun, rocket, launch, phase):
     """One trajectory sample; accelerations come from the model, not finite differences."""
-    d = fun(t, y, rocket, launch)
-    if phase in ("parachute", "landed"):
-        alpha = mach = margin = np.nan
-        mass = rocket.mass_properties(t)[0]
+    if fun is None:  # landed
+        accel = [0.0] * len(model.VELOCITY)
     else:
-        *_, mass, _, (alpha, mach, margin) = dof3.aero_forces(t, y, rocket, launch)
-    if phase == "landed":
-        d = [0.0] * 6
-    return (t, y[0], y[1], y[2], y[3], d[2], d[3], y[4], alpha, mach, margin, mass, phase)
+        d = fun(t, y, rocket, launch)
+        accel = [d[i] for i in model.VELOCITY]
+    if phase in ("parachute", "landed"):
+        extra = (np.nan, np.nan, np.nan, rocket.mass_properties(t)[0])
+    else:
+        extra = model.info(t, y, rocket, launch)
+    return (t, *y, *accel, *extra, phase)
+
+
+simulate_3dof = partial(_fly, dof3)
+simulate = partial(_fly, dof6)

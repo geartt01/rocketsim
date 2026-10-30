@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from rocketsim.aero.barrowman import cn_alpha_cp, fins_cn_alpha_cp
-from rocketsim.aero.damping import pitch_damping_moment
+from rocketsim.aero.damping import pitch_damping_coefficient
 from rocketsim.aero.drag import buildup_cd, drag_coefficient, skin_friction_coefficient
 from rocketsim.io import load_config
 
@@ -83,8 +83,8 @@ def test_drag_table_and_constant(rocket):
     assert drag_coefficient(rocket, 0.3, 1e6, True) == 0.45
 
 
-def test_pitch_damping_opposes_rotation(rocket):
+def test_pitch_damping_coefficient(rocket):
     x_f = fins_cn_alpha_cp(rocket, 0.0)[1]
-    assert pitch_damping_moment(rocket, 1.2, 2.0, 0.27, x_f) < 0
-    assert pitch_damping_moment(rocket, 1.2, -2.0, 0.27, x_f) > 0
-    assert pitch_damping_moment(rocket, 1.2, 0.0, 0.27, x_f) == 0
+    k = pitch_damping_coefficient(rocket, 1.2, 0.27, x_f)
+    assert k > 0  # the moment −K·ω·|ω| then always opposes ω
+    assert pitch_damping_coefficient(rocket, 2.4, 0.27, x_f) == pytest.approx(2 * k)

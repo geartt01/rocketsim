@@ -1,11 +1,14 @@
-"""Horizontal wind models (3-DOF: wind blows along +x)."""
+"""Horizontal wind models."""
 
 from dataclasses import dataclass
+
+import numpy as np
 
 
 @dataclass
 class Wind:
-    speed: float  # m/s at reference_height; positive blows toward +x (downrange)
+    speed: float  # m/s at reference_height, ≥ 0
+    direction: float  # rad clockwise from North that the wind blows FROM (meteorological)
     reference_height: float  # m above the launch site
     profile: str  # "constant" | "power_law"
 
@@ -21,3 +24,8 @@ class Wind:
         if self.profile == "constant":
             return self.speed
         return self.speed * (max(z, 0.0) / self.reference_height) ** (1 / 7)
+
+    def vector(self, z):
+        """Wind velocity in ENU, m/s: −w(z)·[sin d, cos d, 0] (it blows toward d + 180°)."""
+        w = self(z)
+        return np.array([-w * np.sin(self.direction), -w * np.cos(self.direction), 0.0])

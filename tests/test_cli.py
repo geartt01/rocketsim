@@ -21,8 +21,8 @@ rocket:
   drag: 0.5
 motor: {MOTOR}
 recovery: {{chute_cda: 0.05}}
-launch: {{site_altitude: 300, rail_length: 1.0, rail_elevation: 85}}
-wind: {{speed: 2.0, reference_height: 10.0, profile: constant}}
+launch: {{site_altitude: 300, rail_length: 1.0, rail_elevation: 85, rail_heading: 45}}
+wind: {{speed: 2.0, direction: 300, reference_height: 10.0, profile: constant}}
 """
 
 
@@ -62,6 +62,7 @@ def test_drag_table(tmp_path):
         ("shape: ogive, length: 0.08", "shape: ogive, length: 0.01", "tangent ogive"),
         ("profile: rounded", "profile: wavy", "must be one of"),
         ("rail_elevation: 85", "rail_elevation: 95", "≤ 90"),
+        ("speed: 2.0", "speed: -2.0", "≥ 0"),
         ("drag: 0.5", "drag: missing.csv", "cannot read drag table"),
         ("wind:", "breeze:", "top-level keys"),
     ],
@@ -76,9 +77,10 @@ def test_cli_run(tmp_path, monkeypatch, capsys):
     monkeypatch.chdir(tmp_path)
     main(["run", str(EXAMPLE)])
     printed = capsys.readouterr().out
-    for label in ("Apogee", "Rail-exit velocity", "Stability margin", "Drift"):
+    for label in ("Apogee", "Rail-exit velocity", "Stability margin", "Landing point"):
         assert label in printed
     out = tmp_path / "outputs" / "example_rocket"
     header = (out / "trajectory.csv").read_text().splitlines()[0]
-    assert header == "t,x,z,vx,vz,ax,az,theta,alpha,mach,margin,mass,phase"
+    assert header == ("t,x,y,z,vx,vy,vz,qw,qx,qy,qz,wx,wy,wz,ax,ay,az,alpha,mach,margin,mass,phase")
     assert (out / "flight.png").stat().st_size > 0
+    assert (out / "trajectory_3d.png").stat().st_size > 0

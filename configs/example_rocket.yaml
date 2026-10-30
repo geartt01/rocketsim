@@ -36,9 +36,11 @@ recovery:
 launch:
   site_altitude: 0.0      # m above mean sea level
   rail_length: 0.9        # m travelled along the launch rod before the rocket is free
-  rail_elevation: 85.0    # deg above horizontal, tilted downrange (+x)
+  rail_elevation: 85.0    # deg above horizontal
+  rail_heading: 90.0      # deg clockwise from North that the rail leans toward (90 = East)
 
 wind:
-  speed: 3.0              # m/s at reference_height, blowing downrange (+x); negative = toward the rail
+  speed: 3.0              # m/s at reference_height
+  direction: 270.0        # deg clockwise from North the wind blows FROM (270 = from the West)
   reference_height: 10.0  # m
   profile: power_law      # constant | power_law (1/7 exponent)

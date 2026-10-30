@@ -45,22 +45,25 @@ def shell_properties(x, r, mass):
     """Mass properties of a thin shell of revolution with uniform areal density.
 
     The profile (x, r) is cut into conical rings; ring i has surface dS = 2π·r_i·ds_i and mass
-    dm = m·dS/S. A thin ring of radius r about a diameter has I = dm·r²/2, so about the
-    shell's CG:  I_t = Σ dm·(r²/2 + (x − x_cg)²).
+    dm = m·dS/S. A thin ring of radius r has I = dm·r² about the axis and dm·r²/2 about a
+    diameter, so about the shell's CG:
+        I_x = Σ dm·r²,   I_t = Σ dm·(r²/2 + (x − x_cg)²)
 
     Args: x, r: profile samples, m; mass, kg.
-    Returns: (x_cg [m], I_transverse about x_cg [kg·m²], wetted surface area S [m²]).
+    Returns: (x_cg [m], I_transverse about x_cg [kg·m²], I_axial [kg·m²],
+              wetted surface area S [m²]).
     """
     xm, rm = (x[1:] + x[:-1]) / 2, (r[1:] + r[:-1]) / 2
     ds = 2 * np.pi * rm * np.hypot(np.diff(x), np.diff(r))
     w = ds / ds.sum()
     x_cg = np.sum(w * xm)
-    return x_cg, mass * np.sum(w * (rm**2 / 2 + (xm - x_cg) ** 2)), ds.sum()
+    i_t = mass * np.sum(w * (rm**2 / 2 + (xm - x_cg) ** 2))
+    return x_cg, i_t, mass * np.sum(w * rm**2), ds.sum()
 
 
 def solid_cylinder_inertia(mass, radius, length):
-    """Transverse inertia of a solid cylinder about its CG, I = m·(3r² + L²)/12, kg·m²."""
-    return mass * (3 * radius**2 + length**2) / 12
+    """Solid cylinder about its CG: (I_t = m·(3r² + L²)/12, I_x = m·r²/2), kg·m²."""
+    return mass * (3 * radius**2 + length**2) / 12, mass * radius**2 / 2
 
 
 @dataclass
@@ -104,9 +107,9 @@ class Fins:
         """Mass properties of the fin set as thin flat plates.
 
         Each fin is cut into spanwise strips (chord c, radius r = R + y). For N ≥ 3 evenly
-        spaced fins Σ sin²φ_k = N/2, so the transverse inertia about the set's CG is
-            I_t = m·(E[(x − x_cg)²] + E[r²]/2),   averages weighted by area.
-        Returns: (x_cg [m], I_transverse [kg·m²]).
+        spaced fins Σ sin²φ_k = N/2, so about the set's CG
+            I_t = m·(E[(x − x_cg)²] + E[r²]/2),   I_x = m·E[r²],   averages weighted by area.
+        Returns: (x_cg [m], I_transverse [kg·m²], I_axial [kg·m²]).
         """
         y = np.linspace(0.0, self.span, _N)
         ym, dy = (y[1:] + y[:-1]) / 2, np.diff(y)
@@ -116,7 +119,7 @@ class Fins:
         x_cg = np.sum(w * x_mid)
         e_dx2 = np.sum(w * (c**2 / 12 + (x_mid - x_cg) ** 2))
         e_r2 = np.sum(w * (body_radius + ym) ** 2)
-        return x_cg, self.mass * (e_dx2 + e_r2 / 2)
+        return x_cg, self.mass * (e_dx2 + e_r2 / 2), self.mass * e_r2
 
 
 @dataclass
@@ -144,14 +147,13 @@ class Rocket:
     def __post_init__(self):
         r = self.radius
         x = np.linspace(0.0, self.nose.length, _N)
-        nose_cg, nose_i, self.nose_surface = shell_properties(
+        *nose, self.nose_surface = shell_properties(
             x, nose_radius(self.nose.shape, x, self.nose.length, r), self.nose.mass)
         x = np.linspace(self.nose.length, self.length, _N)
-        tube_cg, tube_i, _ = shell_properties(x, np.full(_N, r), self.body.mass)
-        fin_cg, fin_i = self.fins.properties(r)
-        parts = [(self.nose.mass, nose_cg, nose_i), (self.body.mass, tube_cg, tube_i),
-                 (self.fins.mass, fin_cg, fin_i)]
-        parts += [(m.mass, m.position, solid_cylinder_inertia(m.mass, m.radius, m.length))
+        *tube, _ = shell_properties(x, np.full(_N, r), self.body.mass)
+        parts = [(self.nose.mass, *nose), (self.body.mass, *tube),
+                 (self.fins.mass, *self.fins.properties(r))]
+        parts += [(m.mass, m.position, *solid_cylinder_inertia(m.mass, m.radius, m.length))
                   for m in self.masses]
         self._dry = combine(parts)
         n = self.nose  # V = ∫ π·r(x)² dx, cached because the CP needs it on every step
@@ -177,24 +179,25 @@ class Rocket:
         return self._dry[0]
 
     def mass_properties(self, t):
-        """Total mass, CG and transverse (pitch) inertia at time t since ignition.
+        """Total mass, CG and inertia at time t since ignition.
 
         The motor is a solid cylinder whose mass m_casing + m_prop(t) sits at its geometric
-        centre (propellant CG assumed fixed). Parallel-axis theorem:
-            m = Σm_i,  x_cg = Σm_i·x_i / m,  I = Σ[I_i + m_i·(x_i − x_cg)²]
+        centre (propellant CG assumed fixed). Parallel-axis theorem (all parts on the axis):
+            m = Σm_i,  x_cg = Σm_i·x_i / m,  I_t = Σ[I_t,i + m_i·(x_i − x_cg)²],  I_x = Σ I_x,i
 
-        Returns: (m [kg], x_cg [m from nose tip], I_pitch about the CG [kg·m²]).
+        Returns: (m [kg], x_cg [m from nose tip], I_transverse (pitch = yaw) about the CG
+                  [kg·m²], I_axial (roll) [kg·m²]).
         """
         mo = self.motor
         m_motor = mo.total_mass_initial - mo.propellant_mass_initial + mo.propellant_mass(t)
         motor_part = (m_motor, self.motor_position - mo.length / 2,
-                      solid_cylinder_inertia(m_motor, mo.diameter / 2, mo.length))
+                      *solid_cylinder_inertia(m_motor, mo.diameter / 2, mo.length))
         return combine([self._dry, motor_part])
 
 
 def combine(parts):
-    """Combine (m, x_cg, I about own CG) parts into one with the parallel-axis theorem."""
+    """Combine (m, x_cg, I_t about own CG, I_x) parts with the parallel-axis theorem."""
     m = sum(p[0] for p in parts)
     x_cg = sum(p[0] * p[1] for p in parts) / m
-    inertia = sum(p[2] + p[0] * (p[1] - x_cg) ** 2 for p in parts)
-    return m, x_cg, inertia
+    i_t = sum(p[2] + p[0] * (p[1] - x_cg) ** 2 for p in parts)
+    return m, x_cg, i_t, sum(p[3] for p in parts)

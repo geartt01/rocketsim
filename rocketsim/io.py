@@ -104,13 +104,18 @@ def load_config(path):
                     number(r, "surface_roughness", "rocket", 0), drag,
                     number(s, "chute_cda", "recovery", 0))
 
-    s = section(cfg, "wind", "wind", ("speed", "reference_height", "profile"))
-    wind = Wind(number(s, "speed", "wind"), number(s, "reference_height", "wind", 0),
+    s = section(cfg, "wind", "wind", ("speed", "direction", "reference_height", "profile"))
+    wind = Wind(number(s, "speed", "wind", 0, low_ok=True),
+                np.radians(number(s, "direction", "wind", 0, low_ok=True, high=360)),
+                number(s, "reference_height", "wind", 0),
                 choice(s, "profile", "wind", ("constant", "power_law")))
-    s = section(cfg, "launch", "launch", ("site_altitude", "rail_length", "rail_elevation"))
+    s = section(cfg, "launch", "launch",
+                ("site_altitude", "rail_length", "rail_elevation", "rail_heading"))
     launch = Launch(number(s, "site_altitude", "launch", -2000, low_ok=True, high=20000),
                     number(s, "rail_length", "launch", 0),
-                    np.radians(number(s, "rail_elevation", "launch", 0, high=90)), wind)
+                    np.radians(number(s, "rail_elevation", "launch", 0, high=90)),
+                    np.radians(number(s, "rail_heading", "launch", 0, low_ok=True, high=360)),
+                    wind)
     return rocket, launch
 
 

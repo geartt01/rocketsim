@@ -7,7 +7,7 @@ import numpy as np
 
 from rocketsim.flight import simulate
 from rocketsim.io import load_config, write_trajectory_csv
-from rocketsim.plots import plot_flight
+from rocketsim.plots import plot_3d, plot_flight
 
 
 def main(argv=None):
@@ -22,9 +22,11 @@ def main(argv=None):
     out.mkdir(parents=True, exist_ok=True)
     write_trajectory_csv(flight, out / "trajectory.csv")
     plot_flight(flight, out / "flight.png")
+    plot_3d(flight, out / "trajectory_3d.png")
 
     s = flight.summary
-    print(f"Apogee              {s['apogee']:8.1f} m   ({s['apogee_x']:+.1f} m downrange)")
+    (ax, ay), (lx, ly) = s["apogee_position"], s["landing_position"]
+    print(f"Apogee              {s['apogee']:8.1f} m   (E {ax:+.1f} m, N {ay:+.1f} m)")
     print(f"Time to apogee      {s['time_to_apogee']:8.2f} s")
     print(f"Max velocity        {s['max_velocity']:8.1f} m/s  (Mach {s['max_mach']:.2f})")
     print(f"Max acceleration    {s['max_accel_g']:8.1f} g")
@@ -33,6 +35,6 @@ def main(argv=None):
           f"(min {s['min_margin']:.2f})")
     print(f"Max angle of attack {np.degrees(s['max_alpha']):8.1f} deg")
     print(f"Landing velocity    {s['landing_velocity']:8.2f} m/s")
-    print(f"Drift               {s['drift']:8.1f} m downrange")
+    print(f"Landing point       {s['drift']:8.1f} m from the rail (E {lx:+.1f} m, N {ly:+.1f} m)")
     print(f"Flight time         {s['flight_time']:8.1f} s")
-    print(f"Saved {out / 'trajectory.csv'} and {out / 'flight.png'}")
+    print(f"Saved {out / 'trajectory.csv'}, {out / 'flight.png'} and {out / 'trajectory_3d.png'}")

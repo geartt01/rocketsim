@@ -11,7 +11,7 @@ from scipy.integrate import solve_ivp
 
 from rocketsim.dynamics import dof3
 from rocketsim.dynamics.dof1 import Rocket1D
-from rocketsim.flight import simulate, simulate_1dof
+from rocketsim.flight import simulate_1dof, simulate_3dof
 from rocketsim.io import load_config
 from rocketsim.wind import Wind
 
@@ -23,13 +23,14 @@ def setup(wind_speed=0.0, elevation_deg=90.0, profile="constant", cd=None):
     if cd is not None:
         rocket.drag = cd
     launch.rail_elevation = np.radians(elevation_deg)
-    launch.wind = Wind(wind_speed, 10.0, profile)
+    launch.rail_heading = np.radians(90.0)  # downrange x = East
+    launch.wind = Wind(wind_speed, np.radians(270.0), 10.0, profile)  # blows toward +x
     return rocket, launch
 
 
 def test_reduces_to_1dof_on_vertical_rail_without_wind():
     rocket, launch = setup(cd=0.5)
-    flight = simulate(rocket, launch)
+    flight = simulate_3dof(rocket, launch)
     r1 = Rocket1D(rocket.dry_mass, rocket.body.diameter, 0.5, rocket.motor, rocket.chute_cda,
                   launch.site_altitude)
     ref = simulate_1dof(r1)
@@ -59,24 +60,24 @@ def test_stable_rocket_restores_angle_of_attack():
 
 def test_weathercocks_into_wind():
     # Wind blows toward +x, i.e. comes from −x: the nose must turn toward −x (θ > 90°).
-    flight = simulate(*setup(wind_speed=5.0))
+    flight = simulate_3dof(*setup(wind_speed=5.0))
     tr = flight.trajectory
     powered = tr["phase"] == "powered"
     assert tr["theta"][powered][-1] > np.pi / 2
-    assert flight.summary["apogee_x"] < 0
+    assert flight.summary["apogee_position"][0] < 0
 
 
 def test_drifts_with_the_wind_under_parachute():
-    flight = simulate(*setup(wind_speed=4.0))
+    flight = simulate_3dof(*setup(wind_speed=4.0))
     tr = flight.trajectory
     chute = tr["phase"] == "parachute"
     assert tr["vx"][chute][-1] == pytest.approx(4.0, rel=1e-3)
-    assert flight.summary["drift"] > flight.summary["apogee_x"]
+    assert flight.summary["landing_position"][0] > flight.summary["apogee_position"][0]
 
 
 def test_rail_exit_at_rail_length():
     rocket, launch = setup(elevation_deg=80.0)
-    flight = simulate(rocket, launch)
+    flight = simulate_3dof(rocket, launch)
     rail = flight.trajectory["phase"] == "rail"
     assert np.allclose(flight.trajectory["theta"][rail], np.radians(80.0))
     t_exit = flight.events["rail_exit"]
@@ -92,5 +93,5 @@ def test_warns_when_unstable():
         warnings.simplefilter("always")
         # an unstable rocket may not fly a sensible trajectory; the warning is the point
         with contextlib.suppress(ValueError, RuntimeError):
-            simulate(rocket, launch)
+            simulate_3dof(rocket, launch)
     assert any("stability margin" in str(w.message) for w in caught)
