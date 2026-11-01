@@ -70,3 +70,26 @@ dispersions:
   gust_intensity:      {uniform: [0.0, 0.6]}    # m/s, turbulence sigma (~10-20 % of the wind)
   chute_cda_scale:     {normal: [1.0, 0.07]}
   drogue_delay:        {uniform: [0.0, 1.0]}    # s
+
+# Simulated sensor logs (python -m rocketsim sensors ...). YAML uses g and deg/s.
+# Noise sigma per sample = noise density * sqrt(bandwidth), bandwidth = half the sample rate.
+sensors:
+  imu_rate: 500           # Hz
+  baro_rate: 50           # Hz, must divide imu_rate
+  pad_time: 2.0           # s logged before ignition (t < 0), for flight-computer calibration
+  landed_time: 2.0        # s logged after landing
+  accel:                  # MPU-6050 datasheet: +-16 g max, 16-bit, 400 ug/sqrt(Hz)
+    range_g: 16.0
+    bits: 16
+    noise_g: 0.00632      # 400e-6 * sqrt(250 Hz)
+    bias_g: [0.02, -0.015, 0.03]   # illustrative, inside the +-50 to 80 mg zero-g tolerance
+    scale_error: 0.005    # illustrative, inside the +-3 % sensitivity tolerance
+  gyro:                   # MPU-6050 datasheet: +-2000 deg/s max, 16-bit, 0.005 deg/s/sqrt(Hz)
+    range_dps: 2000.0
+    bits: 16
+    noise_dps: 0.0791     # 0.005 * sqrt(250 Hz)
+    bias_dps: [0.5, -0.4, 0.3]     # illustrative, inside the +-20 deg/s zero-rate tolerance
+    walk_dps_per_sqrt_s: 0.002     # illustrative: the datasheet gives no value
+  baro:                   # BMP280 datasheet, ultra-high-resolution mode
+    noise_pa: 1.3
+    resolution_pa: 0.16

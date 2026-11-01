@@ -54,6 +54,13 @@ def normalize(y):
     return y
 
 
+def stop_rotation(y):
+    """State with zero pitch rate, for the point-mass recovery phases."""
+    y = np.array(y, dtype=float)
+    y[5] = 0.0
+    return y
+
+
 def aero_forces(t, y, rocket, launch):
     """Inertial non-gravity forces and pitching moment about the CG.
 

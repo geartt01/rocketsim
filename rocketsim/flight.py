@@ -73,6 +73,8 @@ class Flight:
     trajectory: dict  # column name → array
     events: dict  # event name → time since ignition, s
     summary: dict
+    segments: tuple = ()  # (solver result, derivative, args, phase, extra times) per phase
+    final_state: np.ndarray | None = None  # state at landing
 
 
 def _check(sol, phase, what):
@@ -214,6 +216,7 @@ def _fly(model, rocket, launch, rtol=1e-8, atol=1e-8, dt_out=0.01, method="DOP85
     events["drogue"] = t_now
     deployments = [(rec.drogue, t_now)]
     descent = {"drogue_descent_rate": None, "main_descent_rate": None}
+    y = model.stop_rotation(y)  # attitude is frozen under canopy, so no spin rate either
 
     if rec.main is not None and y[model.Z] <= rec.main_altitude:
         deployments.append((rec.main, t_now))  # already below the main altitude: open both
@@ -270,7 +273,7 @@ def _fly(model, rocket, launch, rtol=1e-8, atol=1e-8, dt_out=0.01, method="DOP85
         "flight_time": events["landing"] - events["liftoff"],
     }
     _warn_mach(summary["max_mach"])
-    return Flight(tr, events, summary)
+    return Flight(tr, events, summary, tuple(segments), y)
 
 
 def _opening_shock(model, segment, g, window=3.0, step=1e-3):

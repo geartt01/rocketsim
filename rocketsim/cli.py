@@ -1,4 +1,4 @@
-"""Command line: python -m rocketsim run|montecarlo <config.yaml>."""
+"""Command line: python -m rocketsim run|montecarlo|sensors <config.yaml>."""
 
 import argparse
 import csv
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from rocketsim import montecarlo
+from rocketsim import montecarlo, sensors
 from rocketsim.flight import simulate
 from rocketsim.io import load_config, write_trajectory_csv
 from rocketsim.plots import plot_3d, plot_flight, plot_montecarlo
@@ -24,12 +24,13 @@ def main(argv=None):
     mc.add_argument("-n", type=int, default=500, help="number of flights (default 500)")
     mc.add_argument("--seed", type=int, default=1, help="master random seed (default 1)")
     mc.add_argument("--workers", type=int, default=None, help="processes (default: all cores)")
+    sens = commands.add_parser("sensors", help="fly once and write simulated IMU and barometer "
+                               "logs using the config's sensors: section")
+    sens.add_argument("config", help="rocket config YAML")
+    sens.add_argument("--seed", type=int, default=1, help="random seed (default 1)")
     args = parser.parse_args(argv)
     out = Path("outputs") / Path(args.config).stem
-    if args.command == "run":
-        _run(args, out)
-    else:
-        _montecarlo(args, out)
+    {"run": _run, "montecarlo": _montecarlo, "sensors": _sensors}[args.command](args, out)
 
 
 def _run(args, out):
@@ -57,6 +58,20 @@ def _run(args, out):
     print(f"Landing point       {s['drift']:8.1f} m from the rail (E {lx:+.1f} m, N {ly:+.1f} m)")
     print(f"Flight time         {s['flight_time']:8.1f} s")
     print(f"Saved {out / 'trajectory.csv'}, {out / 'flight.png'} and {out / 'trajectory_3d.png'}")
+
+
+def _sensors(args, out):
+    config = sensors.load_sensor_config(args.config)
+    rocket, launch = load_config(args.config)
+    flight = simulate(rocket, launch)
+    truth = sensors.truth_at_rate(flight, launch, config.imu_rate, config.pad_time,
+                                  config.landed_time)
+    data = sensors.measure(truth, config, launch, np.random.default_rng(args.seed))
+    sensors.write_outputs(flight, truth, data, config, out)
+    print(f"{len(truth['t'])} IMU samples at {config.imu_rate:.0f} Hz, barometer at "
+          f"{config.baro_rate:.0f} Hz, t = {truth['t'][0]:.1f} to {truth['t'][-1]:.1f} s (seed "
+          f"{args.seed})")
+    print(f"Saved {out / 'sensors.csv'}, {out / 'truth.csv'} and {out / 'events.json'}")
 
 
 def _montecarlo(args, out):

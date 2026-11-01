@@ -32,6 +32,13 @@ def normalize(y):
     return y
 
 
+def stop_rotation(y):
+    """State with zero angular velocity, for the point-mass recovery phases."""
+    y = np.array(y, dtype=float)
+    y[10:13] = 0.0
+    return y
+
+
 def rotational_derivatives(q, omega, inertia, moment):
     """Attitude kinematics and Euler's rotation equations, body frame.
 
