@@ -60,6 +60,8 @@ def load_dispersions(path):
     path = Path(path)
     cfg = read_yaml(path) or {}
     section = cfg.get("dispersions") or {}
+    if not isinstance(section, dict):
+        raise ValueError(f"{path}: dispersions must be a mapping")  # noqa: TRY004
     specs = {k: ("normal", 1.0 if k in _ONE else 0.0, 0.0) for k in PARAMETERS}
     for name, entry in section.items():
         where = f"{path}: dispersions.{name}"

@@ -39,13 +39,19 @@ def main(argv=None):
     view = commands.add_parser("blender", help="open the rocket in Blender (blender/ add-on)")
     view.add_argument("config", nargs="?", default=None, help="rocket config YAML (optional)")
     args = parser.parse_args(argv)
-    if args.command == "flightdata":
-        _flightdata(args)
-    elif args.command == "blender":
-        _blender(args)
-    else:
-        out = Path("outputs") / Path(args.config).stem
-        {"run": _run, "montecarlo": _montecarlo, "sensors": _sensors}[args.command](args, out)
+    # Windows pipes and files default to a legacy code page, which can't encode σ or ≥
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+    try:
+        if args.command == "flightdata":
+            write_flight_package(args.config, args.output)
+        elif args.command == "blender":
+            _blender(args)
+        else:
+            out = Path("outputs") / Path(args.config).stem
+            {"run": _run, "montecarlo": _montecarlo, "sensors": _sensors}[args.command](args, out)
+    except (ValueError, RuntimeError, OSError) as exc:  # the Blender add-on shows this as is
+        sys.exit(f"ERROR: {exc}")
 
 
 def _run(args, out):
@@ -73,13 +79,6 @@ def _run(args, out):
     print(f"Landing point       {s['drift']:8.1f} m from the rail (E {lx:+.1f} m, N {ly:+.1f} m)")
     print(f"Flight time         {s['flight_time']:8.1f} s")
     print(f"Saved {out / 'trajectory.csv'}, {out / 'flight.png'} and {out / 'trajectory_3d.png'}")
-
-
-def _flightdata(args):
-    try:
-        write_flight_package(args.config, args.output)
-    except (ValueError, RuntimeError, OSError) as exc:  # shown as is in the viewer
-        sys.exit(f"ERROR: {exc}")
 
 
 def find_blender():
@@ -141,6 +140,7 @@ def _sensors(args, out):
 
 
 def _montecarlo(args, out):
+    load_config(args.config)  # a bad config is one error, not n failed runs
     specs = montecarlo.load_dispersions(args.config)
     start = time.perf_counter()
     rows = montecarlo.run(Path(args.config), specs, args.n, args.seed, args.workers)

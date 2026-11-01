@@ -71,7 +71,7 @@ def load_sensor_config(path):
 
     def number(sec, key, where, positive=True):
         v = sec[key]
-        if isinstance(v, bool) or not isinstance(v, (int, float)) or v != v:  # noqa: PLR0124
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or not np.isfinite(v):
             fail(f"{where}.{key} must be a number, got {v!r}")
         if v <= 0 if positive else v < 0:
             fail(f"{where}.{key} must be > 0, got {v}" if positive

@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -105,3 +108,22 @@ def test_cli_run(tmp_path, monkeypatch, capsys):
     assert header == ("t,x,y,z,vx,vy,vz,qw,qx,qy,qz,wx,wy,wz,ax,ay,az,alpha,mach,margin,mass,phase")
     assert (out / "flight.png").stat().st_size > 0
     assert (out / "trajectory_3d.png").stat().st_size > 0
+
+
+def test_cli_reports_bad_input_without_a_traceback(tmp_path, capsys):
+    bad = write(tmp_path, VALID.replace("length: 0.3", "length: .inf"))
+    for command, message in (("run", "rocket.body.length"), ("montecarlo", "rocket.body.length"),
+                             ("sensors", "sensors")):
+        with pytest.raises(SystemExit, match=f"^ERROR: .*{message}"):
+            main([command, str(bad)])
+    with pytest.raises(SystemExit, match="^ERROR: .*missing.yaml"):
+        main(["run", str(tmp_path / "missing.yaml")])
+
+
+def test_cli_output_survives_a_legacy_code_page(tmp_path):
+    result = subprocess.run(
+        [sys.executable, "-m", "rocketsim", "montecarlo", str(EXAMPLE), "-n", "3", "--workers", "1"],
+        cwd=tmp_path, capture_output=True, encoding="utf-8", check=False,
+        env=os.environ | {"PYTHONIOENCODING": "cp1252"})
+    assert result.returncode == 0, result.stderr[-500:]
+    assert "Landing 2σ ellipse" in result.stdout

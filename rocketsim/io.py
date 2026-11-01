@@ -52,7 +52,7 @@ def load_config(path):
 
     def number(sec, key, where, low=None, low_ok=False, high=None):
         value = sec[key]
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or np.isnan(value):
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value):
             fail(f"{where}.{key} must be a number, got {value!r}")
         if low is not None and (value < low or (value == low and not low_ok)):
             fail(f"{where}.{key} must be {'≥' if low_ok else '>'} {low}, got {value}")
