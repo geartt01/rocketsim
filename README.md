@@ -1,6 +1,26 @@
 # RocketSim
 
+[![tests](https://github.com/geartt01/rocketsim/actions/workflows/tests.yml/badge.svg)](https://github.com/geartt01/rocketsim/actions/workflows/tests.yml)
+
 6-DOF model-rocket flight simulator in Python, built stage by stage (see `PLAN.md`). It simulates a rocket on its launch rail and in powered and coasting flight, then its descent under a drogue and an optional main parachute, in wind. It prints a summary and saves the trajectory and plots.
+
+![A simulated flight playing in Blender with live data](docs/blender_flight.png)
+
+## Results
+
+Validated on OpenRocket's example rocket, flying an Estes C6-7 ([full report](docs/VALIDATION.md)):
+
+| Compared with OpenRocket 23.09 | Target | Result |
+|---|---|---|
+| Apogee, using OpenRocket's drag curve | within 5 % | **−0.01 %** |
+| Apogee, using RocketSim's own aerodynamics | within 10 % | **+4.03 %** |
+| Centre of pressure | within 2 % | **matches to 4 digits** |
+
+The +4.03 % is explained: RocketSim doesn't model launch lug drag. With the same drag curve, RocketSim is also within 0.13 % of RocketPy's apogee.
+
+![Altitude, velocity and acceleration overlaid with OpenRocket](docs/validation/overlay_ascent.png)
+
+**Limits:** this is one small subsonic rocket (Mach 0.28) compared with other simulators, not with a real flight. The aerodynamics apply below Mach 0.8, and the simulator warns above that. Developed and run on Windows; the automatic tests also run on Linux.
 
 ## Setup (once)
 
@@ -65,6 +85,15 @@ Copy `configs/example_rocket.yaml` and edit it. Every key is required unless mar
 - **Motor:** download a RASP `.eng` file from thrustcurve.org into `motors/` and point `motor:` at it.
 - **Drag:** `buildup` uses the built-in model (Niskanen 2009). A number gives a constant Cd. A path to a `mach,cd` CSV uses that table, for example one exported from OpenRocket.
 - **Recovery:** `drogue` is required (a single-chute rocket uses only it); `main` is optional.
+
+## Credits and licence
+
+RocketSim is licensed under the [GNU GPL v3.0 or later](LICENSE). Files from other sources keep their original terms:
+
+- `reference/openrocket/` and `configs/simple_rocket.yaml`: from [OpenRocket](https://openrocket.info/)'s bundled example "A simple model rocket" by Sampo Niskanen, exported or rebuilt for validation.
+- `motors/Estes_C6.eng`: RASP motor file for the Estes C6, made from NAR published data according to its header.
+
+The aerodynamics follow Niskanen, *Development of an Open Source Model Rocket Simulation Software* (2009), and Barrowman (1967).
 
 ## Test and lint
 

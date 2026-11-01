@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 """RocketSim in Blender: type in a rocket, press Simulate & Fly, watch it fly with live data.
 
 Start it with `python -m rocketsim blender`. The physics stays in the rocketsim package: this
