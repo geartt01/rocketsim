@@ -1,6 +1,7 @@
 """YAML config loading and CSV export. See configs/example_rocket.yaml for the format."""
 
 import csv
+import re
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +12,20 @@ from rocketsim.geometry import FIN_PROFILES, NOSE_SHAPES, Body, Fins, MassItem, 
 from rocketsim.motor import load_eng
 from rocketsim.recovery import Chute, Recovery
 from rocketsim.wind import Wind
+
+
+class _ConfigLoader(yaml.SafeLoader):
+    """YAML 1.1 reads 6e-5 as text unless it has a decimal point; read it as a number."""
+
+
+_ConfigLoader.add_implicit_resolver(
+    "tag:yaml.org,2002:float", re.compile(r"^[-+]?[0-9][0-9_]*(\.[0-9_]*)?[eE][-+]?[0-9]+$"),
+    list("-+0123456789"))
+
+
+def read_yaml(path):
+    """Parse a config file's YAML."""
+    return yaml.load(Path(path).read_text(encoding="utf-8"), Loader=_ConfigLoader)
 
 
 def load_config(path):
@@ -50,7 +65,7 @@ def load_config(path):
             fail(f"{where}.{key} must be one of {list(options)}, got {sec[key]!r}")
         return sec[key]
 
-    cfg = yaml.safe_load(path.read_text(encoding="utf-8"))
+    cfg = read_yaml(path)
     top = ("rocket", "motor", "recovery", "launch", "wind")
     if not isinstance(cfg, dict) or set(cfg) - {"dispersions", "sensors"} != set(top):
         fail(f"top-level keys must be exactly {list(top)} (plus optional dispersions, sensors)")

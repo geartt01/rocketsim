@@ -36,6 +36,28 @@ This varies the inputs listed in the config's `dispersions:` section and flies a
 
 `--seed` makes results repeatable; the same seed always gives the same runs. `--workers` limits how many processes run at once. 500 runs take about 3 minutes on a 4-core laptop.
 
+## Fly it in Blender
+
+Needs [Blender](https://www.blender.org/) 4.5. Double-click `Start RocketSim in Blender.bat`, or:
+
+```bash
+python -m rocketsim blender
+```
+
+Type in the rocket's details, press **Simulate & Fly**, and watch it fly and land with live data on screen. See [docs/BLENDER.md](docs/BLENDER.md).
+
+## Sensor data for a flight computer
+
+```bash
+python -m rocketsim sensors configs/example_rocket.yaml
+```
+
+Writes simulated IMU and barometer readings in the format in [docs/SENSOR_SCHEMA.md](docs/SENSOR_SCHEMA.md).
+
+## Validation
+
+Results against OpenRocket and RocketPy are in [docs/VALIDATION.md](docs/VALIDATION.md).
+
 ## Make your own rocket
 
 Copy `configs/example_rocket.yaml` and edit it. Every key is required unless marked optional, and typos are rejected with a message naming the key. Units are SI, angles are in degrees, and axial positions are measured from the nose tip, positive aft.

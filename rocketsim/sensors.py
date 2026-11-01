@@ -10,12 +10,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
-import yaml
 
 from rocketsim import frames
 from rocketsim.atmosphere import isa
 from rocketsim.constants import G0
 from rocketsim.dynamics import dof6
+from rocketsim.io import read_yaml
 
 STATE_COLUMNS = dof6.STATE
 SENSOR_COLUMNS = ("t", "ax", "ay", "az", "gx", "gy", "gz", "pressure_pa", "temperature_k")
@@ -89,7 +89,7 @@ def load_sensor_config(path):
             fail(f"{where}.{key} must be a list of 3 numbers")
         return tuple(float(c) * factor for c in v)
 
-    cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    cfg = read_yaml(path) or {}
     s = section(cfg, "sensors", "sensors",
                 ("imu_rate", "baro_rate", "pad_time", "landed_time", "accel", "gyro", "baro"))
     a = section(s, "accel", "sensors.accel",

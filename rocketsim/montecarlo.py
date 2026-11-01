@@ -12,10 +12,9 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import numpy as np
-import yaml
 
 from rocketsim.flight import simulate
-from rocketsim.io import load_config
+from rocketsim.io import load_config, read_yaml
 from rocketsim.recovery import Chute
 from rocketsim.wind import GUST_DT, gust_signal, pink_noise
 
@@ -59,7 +58,7 @@ def load_dispersions(path):
     Returns {name: (distribution, a, b)}. Raises ValueError naming the file and entry.
     """
     path = Path(path)
-    cfg = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    cfg = read_yaml(path) or {}
     section = cfg.get("dispersions") or {}
     specs = {k: ("normal", 1.0 if k in _ONE else 0.0, 0.0) for k in PARAMETERS}
     for name, entry in section.items():

@@ -29,3 +29,4 @@
 * Run: `python -m rocketsim run configs/example_rocket.yaml`
 * Monte Carlo (Stage 5+): `python -m rocketsim montecarlo configs/example_rocket.yaml -n 500`
 * Sensors (Stage 6+): `python -m rocketsim sensors configs/example_rocket.yaml`
+* Blender: `python -m rocketsim blender`

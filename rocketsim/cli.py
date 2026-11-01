@@ -1,13 +1,18 @@
-"""Command line: python -m rocketsim run|montecarlo|sensors <config.yaml>."""
+"""Command line: python -m rocketsim run|montecarlo|sensors|flightdata|blender."""
 
 import argparse
 import csv
+import os
+import shutil
+import subprocess
+import sys
 import time
 from pathlib import Path
 
 import numpy as np
 
 from rocketsim import montecarlo, sensors
+from rocketsim.export import write_flight_package
 from rocketsim.flight import simulate
 from rocketsim.io import load_config, write_trajectory_csv
 from rocketsim.plots import plot_3d, plot_flight, plot_montecarlo
@@ -28,9 +33,19 @@ def main(argv=None):
                                "logs using the config's sensors: section")
     sens.add_argument("config", help="rocket config YAML")
     sens.add_argument("--seed", type=int, default=1, help="random seed (default 1)")
+    data = commands.add_parser("flightdata", help="fly once and package it for a 3-D viewer")
+    data.add_argument("config", help="rocket config YAML")
+    data.add_argument("-o", "--output", required=True, help="output .npz file")
+    view = commands.add_parser("blender", help="open the rocket in Blender (blender/ add-on)")
+    view.add_argument("config", nargs="?", default=None, help="rocket config YAML (optional)")
     args = parser.parse_args(argv)
-    out = Path("outputs") / Path(args.config).stem
-    {"run": _run, "montecarlo": _montecarlo, "sensors": _sensors}[args.command](args, out)
+    if args.command == "flightdata":
+        _flightdata(args)
+    elif args.command == "blender":
+        _blender(args)
+    else:
+        out = Path("outputs") / Path(args.config).stem
+        {"run": _run, "montecarlo": _montecarlo, "sensors": _sensors}[args.command](args, out)
 
 
 def _run(args, out):
@@ -58,6 +73,57 @@ def _run(args, out):
     print(f"Landing point       {s['drift']:8.1f} m from the rail (E {lx:+.1f} m, N {ly:+.1f} m)")
     print(f"Flight time         {s['flight_time']:8.1f} s")
     print(f"Saved {out / 'trajectory.csv'}, {out / 'flight.png'} and {out / 'trajectory_3d.png'}")
+
+
+def _flightdata(args):
+    try:
+        write_flight_package(args.config, args.output)
+    except (ValueError, RuntimeError, OSError) as exc:  # shown as is in the viewer
+        sys.exit(f"ERROR: {exc}")
+
+
+def find_blender():
+    """Blender's executable: ROCKETSIM_BLENDER, then PATH, then the usual install folders."""
+    candidates = [os.environ.get("ROCKETSIM_BLENDER"), shutil.which("blender")]
+    local = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs"
+    program_files = Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
+    candidates += sorted(local.glob("blender-*/blender.exe"), reverse=True)
+    candidates += sorted(program_files.glob("Blender Foundation/*/blender.exe"), reverse=True)
+    return next((str(c) for c in candidates if c and Path(c).is_file()), None)
+
+
+def prepare_blender(blender):
+    """Blender settings private to this project, so its welcome screen stays away.
+
+    BLENDER_USER_CONFIG keeps them apart from any other use of Blender on this machine, whose
+    settings are left untouched. Returns (start file to open, environment to run with).
+    """
+    folder = Path(__file__).resolve().parents[1] / "outputs" / "blender"
+    start = folder / "start.blend"
+    env = os.environ | {"ROCKETSIM_PYTHON": sys.executable,
+                        "BLENDER_USER_CONFIG": str(folder / "config")}
+    if not start.exists():
+        folder.mkdir(parents=True, exist_ok=True)
+        setup = ("import bpy; bpy.context.preferences.view.show_splash = False; "
+                 "bpy.ops.wm.save_userpref(); "
+                 f"bpy.ops.wm.save_as_mainfile(filepath={str(start)!r})")
+        subprocess.run([blender, "--background", "--factory-startup", "--python-expr", setup],
+                       check=True, capture_output=True, env=env)
+    return start, env
+
+
+def _blender(args):
+    blender = find_blender()
+    if blender is None:
+        sys.exit("Blender not found. Install it from blender.org, or set ROCKETSIM_BLENDER to "
+                 "blender.exe.")
+    addon = Path(__file__).resolve().parents[1] / "blender" / "rocketsim_addon.py"
+    start, env = prepare_blender(blender)
+    command = [blender, "--window-maximized", str(start), "--python", str(addon)]
+    if args.config:
+        command += ["--", str(Path(args.config).resolve())]
+    subprocess.Popen(command, env=env)
+    print(f"Started Blender: {blender}")
 
 
 def _sensors(args, out):

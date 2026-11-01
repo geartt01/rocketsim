@@ -48,6 +48,12 @@ def test_valid_config(tmp_path):
     assert rocket.motor.name == "TEST"
 
 
+def test_exponent_without_decimal_point_is_a_number(tmp_path):
+    # YAML 1.1 would read this as text; people type it this way, and JSON writes it this way.
+    rocket, _ = load_config(write(tmp_path, VALID.replace("60.0e-6", "6e-05")))
+    assert rocket.roughness == 6e-05
+
+
 def test_drag_table(tmp_path):
     (tmp_path / "cd.csv").write_text("mach,cd\n0.0,0.45\n0.5,0.50\n")
     rocket, _ = load_config(write(tmp_path, VALID.replace("drag: 0.5", "drag: cd.csv")))
