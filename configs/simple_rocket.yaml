@@ -1,0 +1,55 @@
+# OpenRocket's bundled example "A simple model rocket" (designer Sampo Niskanen), rebuilt here
+# from reference/openrocket/components.json for validation (docs/VALIDATION.md).
+# Masses and positions are the values OpenRocket computes from its materials.
+
+rocket:
+  nose:
+    shape: ogive
+    length: 0.100
+    mass: 0.01316
+  body:
+    length: 0.300
+    diameter: 0.025
+    mass: 0.01538
+  fins:
+    count: 3
+    root_chord: 0.0508
+    tip_chord: 0.0508
+    span: 0.030
+    sweep: 0.0254
+    thickness: 0.002
+    position: 0.3492
+    profile: rounded
+    mass: 0.00616
+  masses:                 # point masses at their CG, as OpenRocket lists them
+    - {name: parachute, mass: 0.00798, position: 0.1530}
+    - {name: shock cord, mass: 0.00072, position: 0.1460}
+    - {name: wadding, mass: 0.00200, position: 0.1950}
+    - {name: launch lug, mass: 0.00045, position: 0.2500}
+    - {name: centering ring 1, mass: 0.00018, position: 0.3540}
+    - {name: centering ring 2, mass: 0.00018, position: 0.3990}
+    - {name: inner tube, mass: 0.00148, position: 0.3675}
+    - {name: engine block, mass: 0.00048, position: 0.3345}
+  motor_position: 0.408   # m, the motor's aft end (mount end + 3 mm overhang)
+  surface_roughness: 60.0e-6   # OpenRocket "normal" finish (regular paint)
+  drag: buildup
+
+motor: ../reference/openrocket/simple_rocket_C6.eng
+
+recovery:
+  drogue:
+    cda: 0.05655          # 30 cm chute at OpenRocket's automatic Cd 0.8: 0.8 * pi * 0.15^2
+    fill_time: 0.0        # OpenRocket opens the chute instantly
+    delay: 1.5            # s after apogee; validation/compare.py matches the 8.86 s charge
+
+launch:
+  site_altitude: 0.0
+  rail_length: 1.0
+  rail_elevation: 90.0
+  rail_heading: 90.0
+
+wind:
+  speed: 0.0
+  direction: 270.0
+  reference_height: 10.0
+  profile: constant

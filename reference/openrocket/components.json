@@ -1,0 +1,111 @@
+{
+ "parts": [
+  {
+   "name": "A simple model rocket",
+   "kind": "Rocket",
+   "mass": 0.0,
+   "cg": 0.0,
+   "top": 0.0,
+   "length": 0.42539999999999994
+  },
+  {
+   "name": "Sustainer",
+   "kind": "AxialStage",
+   "mass": 0.0,
+   "cg": 0.0,
+   "top": 0.0,
+   "length": 0.4
+  },
+  {
+   "name": "Nose cone",
+   "kind": "NoseCone",
+   "mass": 0.013155881782163573,
+   "cg": 0.07601923590772898,
+   "top": 0.0,
+   "length": 0.1
+  },
+  {
+   "name": "Body tube",
+   "kind": "BodyTube",
+   "mass": 0.015381237631975636,
+   "cg": 0.25,
+   "top": 0.1,
+   "length": 0.3
+  },
+  {
+   "name": "Parachute",
+   "kind": "Parachute",
+   "mass": 0.007975950925286614,
+   "cg": 0.153,
+   "top": 0.132,
+   "length": 0.042
+  },
+  {
+   "name": "Shock cord",
+   "kind": "ShockCord",
+   "mass": 0.00072,
+   "cg": 0.14600000000000002,
+   "top": 0.12000000000000001,
+   "length": 0.052000000000000005
+  },
+  {
+   "name": "Wadding",
+   "kind": "MassComponent",
+   "mass": 0.002,
+   "cg": 0.195,
+   "top": 0.18,
+   "length": 0.03
+  },
+  {
+   "name": "Launch lug",
+   "kind": "LaunchLug",
+   "mass": 0.00044861943093262263,
+   "cg": 0.25,
+   "top": 0.2325,
+   "length": 0.035
+  },
+  {
+   "name": "Trapezoidal fin set",
+   "kind": "TrapezoidFinSet",
+   "mass": 0.006155740799999998,
+   "cg": 0.3873,
+   "top": 0.34919999999999995,
+   "length": 0.0508
+  },
+  {
+   "name": "Centering ring",
+   "kind": "CenteringRing",
+   "mass": 0.00017944777237304893,
+   "cg": 0.354,
+   "top": 0.353,
+   "length": 0.002
+  },
+  {
+   "name": "Centering ring",
+   "kind": "CenteringRing",
+   "mass": 0.00017944777237304893,
+   "cg": 0.399,
+   "top": 0.398,
+   "length": 0.002
+  },
+  {
+   "name": "Inner Tube",
+   "kind": "InnerTube",
+   "mass": 0.0014820463343309862,
+   "cg": 0.36749999999999994,
+   "top": 0.32999999999999996,
+   "length": 0.075
+  },
+  {
+   "name": "Engine block",
+   "kind": "EngineBlock",
+   "mass": 0.00048066367599923835,
+   "cg": 0.33449999999999996,
+   "top": 0.33199999999999996,
+   "length": 0.005
+  }
+ ],
+ "motor_aft_end": 0.408,
+ "motor_length": 0.07,
+ "motor_diameter": 0.018
+}

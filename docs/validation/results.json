@@ -1,0 +1,188 @@
+{
+ "layer1_table_cd": {
+  "apogee": {
+   "ours": 322.33057912686803,
+   "openrocket": 322.35957,
+   "percent": -0.00899333409954961
+  },
+  "time_from_ignition": {
+   "ours": 7.8403455678833085,
+   "openrocket": 7.84225,
+   "percent": -0.024284256644346858
+  },
+  "max_velocity": {
+   "ours": 95.43406205282146,
+   "openrocket": 95.456139,
+   "percent": -0.02312784427467296
+  },
+  "max_accel_g": {
+   "ours": 19.515067178448554,
+   "openrocket": 19.461086099738445,
+   "percent": 0.2773795790915967
+  },
+  "landing_velocity": {
+   "ours": 4.137892212451629,
+   "openrocket": 4.135655926086956,
+   "percent": 0.05407331762214973
+  }
+ },
+ "layer1_table_cd_wind": {
+  "apogee": {
+   "ours": 319.71239327249907,
+   "openrocket": 319.8694,
+   "percent": -0.04908463501069882
+  },
+  "time_from_ignition": {
+   "ours": 7.820447288834655,
+   "openrocket": 7.83225,
+   "percent": -0.15069374911864664
+  },
+  "max_velocity": {
+   "ours": 95.3029578629388,
+   "openrocket": 95.316623,
+   "percent": -0.01433657281502132
+  },
+  "max_accel_g": {
+   "ours": 19.51453600782043,
+   "openrocket": 19.45224414045571,
+   "percent": 0.3202297221592376
+  },
+  "landing_velocity": {
+   "ours": 4.13789259791727,
+   "openrocket": 4.143447195833333,
+   "percent": -0.13405740808397626
+  },
+  "drift": {
+   "ours": 111.33330945574765,
+   "openrocket": 113.47756000021722,
+   "percent": -1.8895811158307074
+  }
+ },
+ "layer2_aero": [
+  {
+   "mach": 0.049937109,
+   "cd_ours": 0.5583122895643219,
+   "cd_openrocket": 0.6171238,
+   "cp_ours": 0.31934364937655535,
+   "cp_openrocket": 0.31934279
+  },
+  {
+   "mach": 0.10000602,
+   "cd_ours": 0.5878353592645549,
+   "cd_openrocket": 0.61757335,
+   "cp_ours": 0.31937977807229884,
+   "cp_openrocket": 0.319379
+  },
+  {
+   "mach": 0.15005386,
+   "cd_ours": 0.5903459983917663,
+   "cd_openrocket": 0.61978669,
+   "cp_ours": 0.3194401393244168,
+   "cp_openrocket": 0.31943954
+  },
+  {
+   "mach": 0.19989869,
+   "cd_ours": 0.5938803122261037,
+   "cd_openrocket": 0.62327314,
+   "cp_ours": 0.3195245539794677,
+   "cp_openrocket": 0.31952439
+  },
+  {
+   "mach": 0.2501636,
+   "cd_ours": 0.598527396339587,
+   "cd_openrocket": 0.62800966,
+   "cp_ours": 0.31963452806662046,
+   "cp_openrocket": 0.31963362
+  }
+ ],
+ "layer2_mass": {
+  "launch_mass": [
+   0.07127,
+   0.071258457
+  ],
+  "launch_cg": [
+   0.2572618943164625,
+   0.25981148
+  ],
+  "launch_inertia": [
+   0.001183616514779619,
+   0.0011162622
+  ],
+  "burnout_mass": [
+   0.060469999999999996,
+   0.060459036
+  ],
+  "burnout_cg": [
+   0.23659095763079682,
+   0.23959332
+  ],
+  "burnout_inertia": [
+   0.0010084803938309158,
+   0.00094856139
+  ]
+ },
+ "layer3_own_aero": {
+  "apogee": {
+   "ours": 335.3475256752151,
+   "openrocket": 322.35957,
+   "percent": 4.029027484809911
+  },
+  "time_from_ignition": {
+   "ours": 7.996072088949285,
+   "openrocket": 7.84225,
+   "percent": 1.9614535235332298
+  },
+  "max_velocity": {
+   "ours": 97.95545752332524,
+   "openrocket": 95.456139,
+   "percent": 2.618289980621613
+  },
+  "max_accel_g": {
+   "ours": 19.52593696282719,
+   "openrocket": 19.461086099738445,
+   "percent": 0.33323352435923326
+  },
+  "landing_velocity": {
+   "ours": 4.137892957615126,
+   "openrocket": 4.135655926086956,
+   "percent": 0.05409133564662216
+  }
+ },
+ "layer3_own_aero_wind": {
+  "apogee": {
+   "ours": 332.6274853146955,
+   "openrocket": 319.8694,
+   "percent": 3.9885294794361315
+  },
+  "time_from_ignition": {
+   "ours": 7.975688448962945,
+   "openrocket": 7.83225,
+   "percent": 1.8313824119881916
+  },
+  "max_velocity": {
+   "ours": 97.82841540753626,
+   "openrocket": 95.316623,
+   "percent": 2.6352091885758933
+  },
+  "max_accel_g": {
+   "ours": 19.52557902084157,
+   "openrocket": 19.45224414045571,
+   "percent": 0.3769995886147681
+  },
+  "landing_velocity": {
+   "ours": 4.137892873649109,
+   "openrocket": 4.143447195833333,
+   "percent": -0.13405075343566608
+  },
+  "drift": {
+   "ours": 116.549564671471,
+   "openrocket": 113.47756000021722,
+   "percent": 2.7071472732123514
+  }
+ },
+ "rocketpy_table_cd": {
+  "apogee": 322.7524644587988,
+  "time_from_ignition": 7.852674289730405,
+  "max_velocity": 95.46720071236267
+ }
+}

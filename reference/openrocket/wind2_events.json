@@ -1,0 +1,42 @@
+[
+ [
+  "Launch",
+  0.0
+ ],
+ [
+  "Motor ignition",
+  0.0
+ ],
+ [
+  "Lift-off",
+  0.07800000000000006
+ ],
+ [
+  "Launch rod clearance",
+  0.20700000000000016
+ ],
+ [
+  "Motor burnout",
+  1.86
+ ],
+ [
+  "Apogee",
+  7.8722499999998545
+ ],
+ [
+  "Ejection charge",
+  8.860124999999982
+ ],
+ [
+  "Recovery device deployment",
+  8.861124999999982
+ ],
+ [
+  "Ground hit",
+  84.34790789541357
+ ],
+ [
+  "Simulation end",
+  84.34790789541357
+ ]
+]

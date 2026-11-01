@@ -1,0 +1,78 @@
+{
+ "0.1": {
+  "Trapezoidal fin set": {
+   "CD": 0.04406597325172777,
+   "PressureCD": 0.0077123142113806895,
+   "BaseCD": 0.0,
+   "FrictionCD": 0.03635365904034708
+  },
+  "Launch lug": {
+   "CD": 0.03891711032943581,
+   "PressureCD": 0.03891711032943581,
+   "BaseCD": 0.0,
+   "FrictionCD": 0.0
+  },
+  "Sustainer": {
+   "CD": 0.0,
+   "PressureCD": 0.0,
+   "BaseCD": 0.0,
+   "FrictionCD": 0.0
+  },
+  "Nose cone": {
+   "CD": 0.06057430025936745,
+   "PressureCD": 0.0012307701629516998,
+   "BaseCD": 0.0,
+   "FrictionCD": 0.05934353009641575
+  },
+  "A simple model rocket": {
+   "CD": 0.6175706447199943,
+   "PressureCD": 0.06328482312652958,
+   "BaseCD": 0.12129999999999999,
+   "FrictionCD": 0.43298582159346477
+  },
+  "Body tube": {
+   "CD": 0.3858813143760078,
+   "PressureCD": 0.0,
+   "BaseCD": 0.12129999999999999,
+   "FrictionCD": 0.2645813143760078
+  }
+ },
+ "0.2": {
+  "Trapezoidal fin set": {
+   "CD": 0.04511846209236503,
+   "PressureCD": 0.00887397319928626,
+   "BaseCD": 0.0,
+   "FrictionCD": 0.03624448889307877
+  },
+  "Launch lug": {
+   "CD": 0.038547740032509256,
+   "PressureCD": 0.038547740032509256,
+   "BaseCD": 0.0,
+   "FrictionCD": 0.0
+  },
+  "Sustainer": {
+   "CD": 0.0,
+   "PressureCD": 0.0,
+   "BaseCD": 0.0,
+   "FrictionCD": 0.0
+  },
+  "Nose cone": {
+   "CD": 0.060396091460279105,
+   "PressureCD": 0.0012307701629516998,
+   "BaseCD": 0.0,
+   "FrictionCD": 0.059165321297327406
+  },
+  "A simple model rocket": {
+   "CD": 0.6232859936642816,
+   "PressureCD": 0.06640042979331973,
+   "BaseCD": 0.1252,
+   "FrictionCD": 0.4316855638709619
+  },
+  "Body tube": {
+   "CD": 0.3889867758943981,
+   "PressureCD": 0.0,
+   "BaseCD": 0.1252,
+   "FrictionCD": 0.26378677589439814
+  }
+ }
+}
